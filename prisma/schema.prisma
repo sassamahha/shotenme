@@ -1,0 +1,101 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Amazon の「モノ」全般のカテゴリ
+enum CatalogCategory {
+  BOOK        // 書籍（単行本など）
+  COMIC       // コミック
+  LIGHTNOVEL  // ラノベ
+  MAGAZINE    // 雑誌
+  FIGURE      // フィギュア
+  GOODS       // グッズ / 雑貨
+  OTHER       // その他
+}
+
+model User {
+  id             String     @id @default(cuid())
+  clerkId        String     @unique              // Clerk認証のユーザーID
+  handle         String?    @unique              // @jun みたいなハンドル（初期はnull可）
+  displayName    String?                        // 佐々木淳 など（人の名前）
+  bookstoreTitle String?                        // じゅんちゃん書店 / ささきや書店
+  theme          String     @default("default") // 背景テーマ（v2 以降用）
+  bio            String?                        // 自己紹介テキスト
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  amazonAssociateTag String?　/// ユーザー個別の Amazon アソシエイトタグ（例: "sasakiyashoten-22"）
+  isPro              Boolean @default(false)　  /// 有料プランフラグ（Stripe 連携などで切り替え想定）
+
+  books          UserBook[]
+}
+
+model Book {
+  // ここは「Amazon上のカタログアイテム（ASIN単位）」という前提
+  id           String           @id @default(cuid())
+  asin         String           @unique          // Amazon の ASIN（本以外でも共通）
+  isbn10       String?                           // 本の場合だけ埋まる
+  isbn13       String?
+  title        String
+  author       String?                          // メーカー名などを入れてもOK
+  imageUrl     String?
+
+  // 本 / フィギュア / グッズ…を将来的に区別するためのカテゴリ
+  category     CatalogCategory  @default(BOOK)
+
+  // 多言語展開を見据えて残しておく
+  languageCode String?          @default("ja")
+  level        String?
+
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  users        UserBook[]
+}
+
+model UserBook {
+  // 「このユーザーの棚に、この Book が１枚カードとして置かれている」単位
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  sortOrder Int                      // 本棚内の並び順（1,2,3,...）
+  comment   String?                  // 店長の紹介文
+  isPublic  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  book  Book  @relation(fields: [bookId], references: [id])
+  links UserBookLink[]
+
+  @@unique([userId, bookId])         // 同じ本を同じ棚に二重登録しない
+  @@index([userId])
+  @@index([bookId])
+}
+
+model UserBookLink {
+  // 店長ごとの「ボタン」。例：
+  // - Amazonで見る
+  // - Recatenaで見る
+  // - note解説を読む
+  id         String   @id @default(cuid())
+  userBookId String
+  label      String              // ボタン表示名
+  url        String              // 遷移先 URL（Recatena / note / 自前EC など）
+  kind       String?             // 'amazon' | 'recatena' | 'note' | ... など、自由テキスト
+  sortOrder  Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userBook   UserBook @relation(fields: [userBookId], references: [id], onDelete: Cascade)
+
+  @@index([userBookId])
+}

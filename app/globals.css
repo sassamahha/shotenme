@@ -19,8 +19,51 @@
   }
 }
 
+/* ベースリセットちょっとだけ */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Arial, Helvetica, sans-serif;
+}
+
+/* 公開本棚：全体レイアウト（中央寄せ） */
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+/* 公開本棚：カードグリッド */
+
+/* スマホ：2カラム */
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* タブレット以上：余白ちょい広め */
+@media (min-width: 768px) {
+  main {
+    padding: 32px 24px 48px;
+  }
+
+  .book-grid {
+    gap: 24px;
+  }
+}
+
+/* PC：4カラム */
+@media (min-width: 1024px) {
+  .book-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }

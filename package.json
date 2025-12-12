@@ -9,7 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.36.1",
+    "@hello-pangea/dnd": "^18.0.1",
+    "@prisma/client": "^6.19.0",
+    "dotenv": "^17.2.3",
     "next": "16.0.3",
+    "prisma": "^6.19.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
