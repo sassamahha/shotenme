@@ -10,9 +10,7 @@ export default function Home() {
             Shoten.me
           </h1>
           <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            個人店長ごとの「本屋ページ」を最短で作るSaaS。
-            <br />
-            読んだ本/推した本を棚に並べるだけで、その人の思想や好みが見える「公開書店」。
+            書店をつくって、おすすめ本を並べる📚。
           </p>
         </div>
         <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
