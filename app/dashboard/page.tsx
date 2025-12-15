@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/currentUser';
 import UserBookTable from './UserBookTable';
+import MenuButtons from './MenuButtons';
 
 export default async function DashboardPage() {
   // 「現在のユーザー」を共通ヘルパーから取得（SaaS 化したらここだけ差し替え）
@@ -135,66 +136,28 @@ export default async function DashboardPage() {
           >
             {user.bookstoreTitle || '本屋名'}｜書棚
           </h1>
-          <p style={{ fontSize: 14, color: '#6b7280' }}>
-            書店ID : @{user.handle ?? 'yourname'} | 店長 : {user.displayName ?? '店長の名前'}
-          </p>
-          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 8 }}>
-            ※ タイトルが ASIN と同じ本は「（タイトル未取得）」として表示されます。
-          </p>
+          <div style={{ fontSize: 14, color: '#6b7280' }}>
+            <p style={{ margin: 0, marginBottom: 2 }}>
+              書店ID: @{user.handle ?? 'yourname'}
+            </p>
+            <p style={{ margin: 0 }}>
+              店長: {user.displayName ?? '店長の名前'}
+            </p>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Link
-            href="/dashboard/settings"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 999,
-              border: '1px solid #d1d5db',
-              fontSize: 14,
-              textDecoration: 'none',
-              color: '#111827',
-              background: '#fff',
-            }}
-          >
-            アカウント設定
-          </Link>
-          <Link
-            href={`/@${user.handle}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 999,
-              border: '1px solid #d1d5db',
-              fontSize: 14,
-              textDecoration: 'none',
-              color: '#111827',
-              background: '#fff',
-            }}
-          >
-            公開ページを見る
-          </Link>
-          <Link
-            href="/dashboard/books/new"
-            style={{
-              padding: '8px 16px',
-              borderRadius: 999,
-              background: '#10b981',
-              color: '#022c22',
-              fontWeight: 600,
-              fontSize: 14,
-              textDecoration: 'none',
-            }}
-          >
-            本を追加する
-          </Link>
-        </div>
+        <MenuButtons handle={user.handle} />
       </header>
 
       {userBooks.length === 0 ? (
         <p style={{ color: '#6b7280' }}>まだ本が登録されていません。</p>
       ) : (
-        <UserBookTable userBooks={userBooks} />
+        <>
+          <UserBookTable userBooks={userBooks} />
+          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 16 }}>
+            ※ タイトルが ASIN と同じ本は「（タイトル未取得）」として表示されます。
+          </p>
+        </>
       )}
     </main>
   );

@@ -111,6 +111,7 @@ export default function BookCard({ userBook, affiliateTag }: Props) {
           <div
             style={{
               display: 'flex',
+              flexDirection: 'column',
               gap: 8,
               marginTop: 12,
             }}
@@ -120,7 +121,7 @@ export default function BookCard({ userBook, affiliateTag }: Props) {
                 type="button"
                 onClick={() => setOpen(true)}
                 style={{
-                  flex: 1,
+                  width: '100%',
                   padding: '8px 10px',
                   borderRadius: 999,
                   border: '1px solid #d1d5db',
@@ -129,7 +130,7 @@ export default function BookCard({ userBook, affiliateTag }: Props) {
                   cursor: 'pointer',
                 }}
               >
-                紹介文
+                推薦文
               </button>
             )}
 
@@ -138,7 +139,7 @@ export default function BookCard({ userBook, affiliateTag }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                flex: 1,
+                width: '100%',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -158,7 +159,7 @@ export default function BookCard({ userBook, affiliateTag }: Props) {
         </div>
       </article>
 
-      {/* 紹介文モーダル */}
+      {/* 推薦文モーダル */}
       {open && hasComment && (
         <div
           onClick={() => setOpen(false)}
@@ -194,7 +195,7 @@ export default function BookCard({ userBook, affiliateTag }: Props) {
                 color: '#111827',
               }}
             >
-              『{b.title}』紹介文
+              『{b.title}』推薦文
             </h3>
 
             <p

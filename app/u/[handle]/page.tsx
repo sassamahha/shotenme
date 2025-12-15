@@ -19,26 +19,39 @@ function resolveBackground(theme?: string | null): string {
   }
 }
 
-// bio 内の URL を自動でリンク化
+// bio 内の URL を自動でリンク化し、改行を処理
 function linkifyBio(text: string): ReactNode {
-  const urlPattern = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlPattern);
-
-  return parts.map((part, idx) => {
-    if (/^https?:\/\//.test(part)) {
-      return (
-        <a
-          key={idx}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: '#2563eb', textDecoration: 'underline' }}
-        >
-          {part}
-        </a>
-      );
-    }
-    return <span key={idx}>{part}</span>;
+  // まず改行で分割
+  const lines = text.split('\n');
+  
+  return lines.map((line, lineIdx) => {
+    // 各行内のURLをリンク化
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    const parts = line.split(urlPattern);
+    
+    const lineContent = parts.map((part, partIdx) => {
+      if (/^https?:\/\//.test(part)) {
+        return (
+          <a
+            key={`${lineIdx}-${partIdx}`}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#2563eb', textDecoration: 'underline' }}
+          >
+            {part}
+          </a>
+        );
+      }
+      return <span key={`${lineIdx}-${partIdx}`}>{part}</span>;
+    });
+    
+    return (
+      <span key={lineIdx}>
+        {lineContent}
+        {lineIdx < lines.length - 1 && <br />}
+      </span>
+    );
   });
 }
 
@@ -108,6 +121,7 @@ export default async function UserStorePage({ params }: PageProps) {
                 color: '#4b5563',
                 maxWidth: 640,
                 lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
               }}
             >
               {linkifyBio(user.bio)}

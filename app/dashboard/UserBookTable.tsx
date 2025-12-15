@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Pen, Trash } from 'lucide-react';
 import {
   DragDropContext,
   Droppable,
@@ -35,6 +36,7 @@ function commentExcerpt(text: string | null | undefined, max = 80): string {
 export default function UserBookTable({ userBooks: initial }: Props) {
   const [userBooks, setUserBooks] = useState<UserBookItem[]>(initial);
   const [savingOrder, setSavingOrder] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function handleDragEnd(result: DropResult) {
     if (!result.destination) return;
@@ -56,17 +58,46 @@ export default function UserBookTable({ userBooks: initial }: Props) {
     setSavingOrder(false);
   }
 
+  async function handleDelete(userBookId: string, title: string) {
+    if (!confirm(`「${title}」を本棚から削除しますか？`)) {
+      return;
+    }
+
+    setDeletingId(userBookId);
+    try {
+      const res = await fetch(`/api/user-books/${userBookId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.message || '削除に失敗しました。');
+        return;
+      }
+
+      // リストから削除
+      setUserBooks((prev) => prev.filter((ub) => ub.id !== userBookId));
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('削除に失敗しました。');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div
       style={{
         borderRadius: 12,
         border: '1px solid #e5e7eb',
         overflow: 'hidden',
+        overflowX: 'auto',
       }}
     >
       <table
         style={{
           width: '100%',
+          minWidth: 800,
           borderCollapse: 'collapse',
           fontSize: 14,
         }}
@@ -79,10 +110,11 @@ export default function UserBookTable({ userBooks: initial }: Props) {
         >
           <tr>
             <th style={{ padding: '10px 12px', width: 40 }}></th>
-            <th style={{ padding: '10px 12px' }}>タイトル</th>
+            <th style={{ padding: '10px 12px', minWidth: 200 }}>タイトル</th>
             <th style={{ padding: '10px 12px', width: 220 }}>ASIN</th>
-            <th style={{ padding: '10px 12px' }}>コメント（抜粋）</th>
-            <th style={{ padding: '10px 12px', width: 80 }}>編集</th>
+            <th style={{ padding: '10px 12px', minWidth: 200 }}>推薦文</th>
+            <th style={{ padding: '10px 12px', width: 100 }}>公開</th>
+            <th style={{ padding: '10px 12px', width: 100 }}>操作</th>
           </tr>
         </thead>
 
@@ -127,7 +159,7 @@ export default function UserBookTable({ userBooks: initial }: Props) {
                           >
                             ☰
                           </td>
-                          <td style={{ padding: '8px 12px' }}>
+                          <td style={{ padding: '8px 12px', minWidth: 200 }}>
                             {titleLabel}
                           </td>
                           <td
@@ -150,15 +182,73 @@ export default function UserBookTable({ userBooks: initial }: Props) {
                             {comment}
                           </td>
                           <td style={{ padding: '8px 12px' }}>
-                            <Link
-                              href={`/dashboard/books/${ub.id}/edit`}
+                            <span
                               style={{
-                                color: '#2563eb',
-                                textDecoration: 'none',
+                                fontSize: 13,
+                                color: ub.isPublic ? '#10b981' : '#6b7280',
+                                fontWeight: ub.isPublic ? 600 : 400,
                               }}
                             >
-                              編集
-                            </Link>
+                              {ub.isPublic ? '公開' : '非公開'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: 8,
+                                alignItems: 'center',
+                              }}
+                            >
+                              <Link
+                                href={`/dashboard/books/${ub.id}/edit`}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#2563eb',
+                                  textDecoration: 'none',
+                                  padding: '4px',
+                                  borderRadius: 4,
+                                  transition: 'background-color 0.2s',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                              >
+                                <Pen size={16} />
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(ub.id, titleLabel)}
+                                disabled={deletingId === ub.id}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: deletingId === ub.id ? '#9ca3af' : '#ef4444',
+                                  cursor: deletingId === ub.id ? 'not-allowed' : 'pointer',
+                                  padding: '4px',
+                                  borderRadius: 4,
+                                  transition: 'background-color 0.2s',
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (deletingId !== ub.id) {
+                                    e.currentTarget.style.backgroundColor = '#fef2f2';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
+                              >
+                                <Trash size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )}

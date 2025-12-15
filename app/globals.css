@@ -67,3 +67,28 @@ main {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* ダッシュボードメニューボタン：レスポンシブ対応 */
+/* デフォルト: PCではテキスト表示、アイコン非表示 */
+.menu-button-icon {
+  display: none;
+}
+.menu-button-text {
+  display: inline;
+}
+
+/* スマホ（768px以下）: アイコン表示、テキスト非表示、丸ボタン */
+@media (max-width: 768px) {
+  .menu-button {
+    padding: 10px !important;
+    width: 44px;
+    height: 44px;
+    border-radius: 50% !important;
+  }
+  .menu-button-icon {
+    display: block;
+  }
+  .menu-button-text {
+    display: none;
+  }
+}
