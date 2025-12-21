@@ -3,12 +3,14 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type Mode = 'isbn' | 'asin' | 'url';
 
 export default function NewBookPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const bookstoreId = searchParams.get('bookstore');
   const [mode, setMode] = useState<Mode>('isbn');
   const [isbn, setIsbn] = useState('');
   const [asin, setAsin] = useState('');
@@ -24,6 +26,11 @@ export default function NewBookPage() {
     e.preventDefault();
     if (submitting) return;
 
+    if (!bookstoreId) {
+      setError('書店が選択されていません。');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -31,6 +38,7 @@ export default function NewBookPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        bookstoreId,
         mode,
         isbn: mode === 'isbn' ? isbn : undefined,
         asin: mode === 'asin' ? asin : undefined,
@@ -53,7 +61,7 @@ export default function NewBookPage() {
     }
 
     // 成功
-    router.push('/dashboard');
+    router.push(`/dashboard?bookstore=${bookstoreId}`);
     router.refresh();
   };
 

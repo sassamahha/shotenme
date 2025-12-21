@@ -1,12 +1,20 @@
 // app/dashboard/page.tsx
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/currentUser';
+import { getCurrentUser, getCurrentBookstore } from '@/lib/currentUser';
 import UserBookTable from './UserBookTable';
 import MenuButtons from './MenuButtons';
+import { redirect } from 'next/navigation';
 
-export default async function DashboardPage() {
-  // 「現在のユーザー」を共通ヘルパーから取得（SaaS 化したらここだけ差し替え）
+type PageProps = {
+  searchParams: Promise<{ bookstore?: string }>;
+};
+
+export default async function DashboardPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const bookstoreId = params.bookstore;
+
+  // 「現在のユーザー」を共通ヘルパーから取得
   const currentUser = await getCurrentUser();
 
   // まだユーザーが1件も作られていないケース
@@ -35,75 +43,55 @@ export default async function DashboardPage() {
     );
   }
 
-  // 本棚付きでユーザーを再取得（将来は include を getCurrentUser 側に寄せてもOK）
-  const user = await prisma.user.findUnique({
-    where: { id: currentUser.id },
-    include: {
-      books: {
-        orderBy: { sortOrder: 'asc' },
-        include: { book: true },
-      },
-    },
+  // ユーザーの書店一覧を取得
+  const bookstores = await prisma.bookstore.findMany({
+    where: { ownerId: currentUser.id },
+    orderBy: { createdAt: 'asc' },
   });
 
-  if (!user) {
-    // 理論上ここには来ないけど保険で
+  // 書店が1つもない場合は書店作成を促す
+  if (bookstores.length === 0) {
     return (
       <main style={{ padding: '32px 24px' }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
-          本屋名｜書棚
+          書店を作成してください
         </h1>
-        <p style={{ marginBottom: 16, color: '#ef4444' }}>
-          ユーザー情報の取得に失敗しました。
+        <p style={{ marginBottom: 16, color: '#6b7280' }}>
+          最初の書店を作成して、本を追加しましょう。
         </p>
+        <Link
+          href="/dashboard/bookstores/new"
+          style={{
+            display: 'inline-block',
+            padding: '10px 18px',
+            borderRadius: 999,
+            background: '#22c55e',
+            color: '#064e3b',
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          書店を作成する
+        </Link>
       </main>
     );
   }
 
-  // handle未設定の場合は設定画面へ誘導
-  if (!user.handle) {
-    return (
-      <main style={{ padding: '32px 24px' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
-          {user.bookstoreTitle || '本屋名'}｜書棚
-        </h1>
-        <div
-          style={{
-            padding: '24px',
-            marginBottom: 24,
-            background: '#fef3c7',
-            border: '1px solid #fbbf24',
-            borderRadius: 8,
-          }}
-        >
-          <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-            書店IDを設定してください
-          </p>
-          <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>
-            公開ページを表示するには、書店ID（@username）の設定が必要です。
-          </p>
-          <Link
-            href="/dashboard/settings"
-            style={{
-              display: 'inline-block',
-              padding: '10px 20px',
-              borderRadius: 999,
-              background: '#10b981',
-              color: '#022c22',
-              fontWeight: 600,
-              fontSize: 14,
-              textDecoration: 'none',
-            }}
-          >
-            アカウント設定へ
-          </Link>
-        </div>
-      </main>
-    );
+  // bookstoreIdが指定されていない場合は最初の書店にリダイレクト
+  if (!bookstoreId) {
+    redirect(`/dashboard?bookstore=${bookstores[0].id}`);
+  }
+
+  // 指定された書店を取得（所有者チェック含む）
+  const bookstore = await getCurrentBookstore(bookstoreId);
+
+  if (!bookstore) {
+    // 書店が見つからない、または所有者でない場合は最初の書店にリダイレクト
+    redirect(`/dashboard?bookstore=${bookstores[0].id}`);
   }
 
   // クライアント側テーブルに渡すために必要な情報だけ整形
-  const userBooks = user.books.map((ub) => ({
+  const userBooks = bookstore.books.map((ub) => ({
     id: ub.id,
     sortOrder: ub.sortOrder,
     comment: ub.comment,
@@ -116,13 +104,13 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <main style={{ padding: '32px 24px' }}>
+    <main style={{ padding: '24px 20px' }}>
       <header
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 24,
+          marginBottom: 20,
           gap: 16,
         }}
       >
@@ -134,29 +122,34 @@ export default async function DashboardPage() {
               marginBottom: 4,
             }}
           >
-            {user.bookstoreTitle || '本屋名'}｜書棚
+            {bookstore.bookstoreTitle || '本屋名'}｜書棚
           </h1>
           <div style={{ fontSize: 14, color: '#6b7280' }}>
             <p style={{ margin: 0, marginBottom: 2 }}>
-              書店ID: @{user.handle ?? 'yourname'}
+              書店ID: @{bookstore.handle ?? 'yourname'}
             </p>
             <p style={{ margin: 0 }}>
-              店長: {user.displayName ?? '店長の名前'}
+              店長: {bookstore.displayName ?? '店長の名前'}
             </p>
           </div>
         </div>
 
-        <MenuButtons handle={user.handle} />
+        <MenuButtons handle={bookstore.handle} bookstoreId={bookstore.id} />
       </header>
 
       {userBooks.length === 0 ? (
         <p style={{ color: '#6b7280' }}>まだ本が登録されていません。</p>
       ) : (
         <>
-          <UserBookTable userBooks={userBooks} />
-          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 16 }}>
-            ※ タイトルが ASIN と同じ本は「（タイトル未取得）」として表示されます。
-          </p>
+          <UserBookTable userBooks={userBooks} bookstoreId={bookstore.id} />
+          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 16, lineHeight: 1.6 }}>
+            <p style={{ margin: 0, marginBottom: 4 }}>
+             ・ISBNの登録で画像を取得できない場合は、画像のURLをコピペ入力します。
+            </p>
+            <p style={{ margin: 0 }}>
+             ・カテゴリページなどASIN以外のページをリンク先にする場合は、「AmazonのURLを登録」から入力します。
+            </p>
+          </div>
         </>
       )}
     </main>

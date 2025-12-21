@@ -30,7 +30,7 @@ export default async function EditBookPage({ params }: PageProps) {
 
   const userBook = await prisma.userBook.findUnique({
     where: { id: userBookId },
-    include: { book: true, user: true },
+    include: { book: true, bookstore: true },
   });
 
   if (!userBook) {

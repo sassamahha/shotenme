@@ -49,10 +49,15 @@ export async function PATCH(req: Request, ctx: RouteContext) {
       isPublic?: boolean;
     };
 
-    // 1. 対象の UserBook + Book を取得
+    // 1. 対象の UserBook + Book + Bookstore を取得
     const userBook = await prisma.userBook.findUnique({
       where: { id: userBookId },
-      include: { book: true },
+      include: {
+        book: true,
+        bookstore: {
+          select: { id: true, ownerId: true },
+        },
+      },
     });
 
     if (!userBook) {
@@ -63,7 +68,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
     }
 
     // 2. マルチテナント隔離：他人のデータへのアクセスを拒否
-    if (userBook.userId !== currentUser.id) {
+    if (userBook.bookstore.ownerId !== currentUser.id) {
       return NextResponse.json(
         { message: 'この本にアクセスする権限がありません。' },
         { status: 403 },
@@ -71,7 +76,11 @@ export async function PATCH(req: Request, ctx: RouteContext) {
     }
 
     // 3. Book 側のタイトル・著者・画像URL を更新（あれば）
-    const bookData: any = {};
+    const bookData: {
+      title?: string;
+      author?: string;
+      imageUrl?: string | null;
+    } = {};
     if (typeof title === 'string' && title.trim()) bookData.title = title.trim();
     if (typeof author === 'string' && author.trim()) bookData.author = author.trim();
     if (typeof imageUrl === 'string') {
@@ -89,7 +98,10 @@ export async function PATCH(req: Request, ctx: RouteContext) {
     }
 
     // 4. UserBook 側のコメント・公開フラグを更新
-    const userBookData: any = {};
+    const userBookData: {
+      comment?: string | null;
+      isPublic?: boolean;
+    } = {};
     if (typeof comment === 'string') {
       const trimmed = comment.trim();
       userBookData.comment = trimmed || null;
@@ -135,10 +147,14 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
       );
     }
 
-    // 削除前にユーザーIDを取得
+    // 削除前に書店IDを取得
     const userBook = await prisma.userBook.findUnique({
       where: { id: userBookId },
-      select: { userId: true },
+      include: {
+        bookstore: {
+          select: { id: true, ownerId: true },
+        },
+      },
     });
 
     if (!userBook) {
@@ -149,12 +165,14 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
     }
 
     // マルチテナント隔離：他人のデータへのアクセスを拒否
-    if (userBook.userId !== currentUser.id) {
+    if (userBook.bookstore.ownerId !== currentUser.id) {
       return NextResponse.json(
         { message: 'この本にアクセスする権限がありません。' },
         { status: 403 },
       );
     }
+
+    const bookstoreId = userBook.bookstore.id;
 
     // 削除実行
     await prisma.userBook.delete({
@@ -163,7 +181,7 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
 
     // 残りを 1,2,3... に詰め直す
     const rest = await prisma.userBook.findMany({
-      where: { userId: userBook.userId },
+      where: { bookstoreId },
       orderBy: { sortOrder: 'asc' },
     });
 

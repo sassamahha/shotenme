@@ -54,9 +54,10 @@ export default function EditBookForm({ userBookId, initial }: EditBookFormProps)
 
       router.push('/dashboard');
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message ?? '更新に失敗しました。');
+      const errorMessage = err instanceof Error ? err.message : '更新に失敗しました。';
+      setError(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -80,9 +81,10 @@ export default function EditBookForm({ userBookId, initial }: EditBookFormProps)
 
       router.push('/dashboard');
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message ?? '削除に失敗しました。');
+      const errorMessage = err instanceof Error ? err.message : '削除に失敗しました。';
+      setError(errorMessage);
     } finally {
       setIsDeleting(false);
     }

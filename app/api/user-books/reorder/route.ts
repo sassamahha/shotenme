@@ -5,11 +5,18 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/currentUser';
 
 export async function PATCH(req: Request) {
-  const { userBookIds } = await req.json();
+  const { userBookIds, bookstoreId } = await req.json();
 
   if (!Array.isArray(userBookIds)) {
     return NextResponse.json(
       { message: 'userBookIds は配列で送ってください。' },
+      { status: 400 },
+    );
+  }
+
+  if (!bookstoreId) {
+    return NextResponse.json(
+      { message: 'bookstoreId が必要です。' },
       { status: 400 },
     );
   }
@@ -23,12 +30,29 @@ export async function PATCH(req: Request) {
     );
   }
 
-  // マルチテナント隔離：指定されたすべてのuserBookIdsが現在のユーザーのものかチェック
+  // 書店が存在し、所有者であることを確認
+  const bookstore = await prisma.bookstore.findFirst({
+    where: {
+      id: bookstoreId,
+      ownerId: user.id,
+    },
+    select: { id: true, handle: true },
+  });
+
+  if (!bookstore) {
+    return NextResponse.json(
+      { message: '書店が見つかりません。' },
+      { status: 404 },
+    );
+  }
+
+  // マルチテナント隔離：指定されたすべてのuserBookIdsが現在の書店のものかチェック
   const userBooks = await prisma.userBook.findMany({
     where: {
       id: { in: userBookIds },
+      bookstoreId: bookstore.id,
     },
-    select: { id: true, userId: true },
+    select: { id: true, bookstoreId: true },
   });
 
   // 指定されたIDの数と取得できた数が一致しない場合（存在しないIDが含まれている）
@@ -39,29 +63,20 @@ export async function PATCH(req: Request) {
     );
   }
 
-  // 1つでも他人のデータが含まれていれば拒否
-  const hasOtherUserData = userBooks.some((ub) => ub.userId !== user.id);
-  if (hasOtherUserData) {
-    return NextResponse.json(
-      { message: 'この操作を実行する権限がありません。' },
-      { status: 403 },
-    );
-  }
-
   // 指定された順番どおりに 1,2,3... を振り直す
   await prisma.$transaction(
     userBookIds.map((id: string, index: number) =>
       prisma.userBook.update({
-        where: { id, userId: user.id }, // userIdも条件に含める（二重チェック）
+        where: { id, bookstoreId: bookstore.id }, // bookstoreIdも条件に含める（二重チェック）
         data: { sortOrder: index + 1 },
       }),
     ),
   );
 
   // 公開ページのキャッシュをクリア（handleが設定されている場合）
-  if (user.handle) {
-    revalidatePath(`/u/${user.handle}`);
-    revalidatePath(`/@${user.handle}`);
+  if (bookstore.handle) {
+    revalidatePath(`/u/${bookstore.handle}`);
+    revalidatePath(`/@${bookstore.handle}`);
   }
 
   return NextResponse.json({ ok: true });

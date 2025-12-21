@@ -9,4 +9,5 @@ config({ path: resolve(process.cwd(), '.env') });
 
 // 何も指定しなければ、デフォルトで
 // prisma/schema.prisma を読むのでこれでOK
-export default {};
+const prismaConfig = {};
+export default prismaConfig;

@@ -25,6 +25,7 @@ type UserBookItem = {
 
 type Props = {
   userBooks: UserBookItem[];
+  bookstoreId: string;
 };
 
 function commentExcerpt(text: string | null | undefined, max = 80): string {
@@ -33,7 +34,7 @@ function commentExcerpt(text: string | null | undefined, max = 80): string {
   return text.slice(0, max) + '…';
 }
 
-export default function UserBookTable({ userBooks: initial }: Props) {
+export default function UserBookTable({ userBooks: initial, bookstoreId }: Props) {
   const [userBooks, setUserBooks] = useState<UserBookItem[]>(initial);
   const [savingOrder, setSavingOrder] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -51,7 +52,10 @@ export default function UserBookTable({ userBooks: initial }: Props) {
     await fetch('/api/user-books/reorder', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userBookIds: items.map((b) => b.id) }),
+      body: JSON.stringify({
+        userBookIds: items.map((b) => b.id),
+        bookstoreId,
+      }),
     }).catch(() => {
       // 失敗してもとりあえず UI はそのままにしておく（必要ならエラー表示を足す）
     });

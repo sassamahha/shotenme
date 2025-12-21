@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Shoten.me",
-  description: "個人店長ごとの「本屋ページ」を最短で作るSaaS",
+  description: "個人店長ごとの「本屋ページ」を最短で作るサービス",
 };
 
 export default function RootLayout({

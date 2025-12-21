@@ -24,18 +24,13 @@ enum CatalogCategory {
 model User {
   id             String     @id @default(cuid())
   clerkId        String     @unique              // Clerk認証のユーザーID
-  handle         String?    @unique              // @jun みたいなハンドル（初期はnull可）
-  displayName    String?                        // 佐々木淳 など（人の名前）
-  bookstoreTitle String?                        // じゅんちゃん書店 / ささきや書店
-  theme          String     @default("default") // 背景テーマ（v2 以降用）
-  bio            String?                        // 自己紹介テキスト
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  amazonAssociateTag String?　/// ユーザー個別の Amazon アソシエイトタグ（例: "sasakiyashoten-22"）
-  isPro              Boolean @default(false)　  /// 有料プランフラグ（Stripe 連携などで切り替え想定）
+  amazonAssociateTag String?                    // 全書店共通の Amazon アソシエイトタグ（例: "sasakiyashoten-22"）
+  isPro              Boolean @default(false)   // 有料プランフラグ（Stripe 連携などで切り替え想定）
 
-  books          UserBook[]
+  bookstores     Bookstore[]
 }
 
 model Book {
@@ -58,26 +53,43 @@ model Book {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  users        UserBook[]
+  bookstores   UserBook[]
+}
+
+model Bookstore {
+  id             String     @id @default(cuid())
+  ownerId        String                    // User.id（書店の所有者）
+  handle         String?    @unique        // @jun みたいなハンドル
+  bookstoreTitle String?                   // じゅんちゃん書店 / ささきや書店
+  displayName    String?                   // 佐々木淳 など（店長の名前）
+  theme          String     @default("default") // 背景テーマ（v2 以降用）
+  bio            String?                   // 自己紹介テキスト
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  owner          User      @relation(fields: [ownerId], references: [id])
+  books          UserBook[]
+  
+  @@index([ownerId])
 }
 
 model UserBook {
-  // 「このユーザーの棚に、この Book が１枚カードとして置かれている」単位
-  id        String   @id @default(cuid())
-  userId    String
-  bookId    String
-  sortOrder Int                      // 本棚内の並び順（1,2,3,...）
-  comment   String?                  // 店長の紹介文
-  isPublic  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // 「この書店の棚に、この Book が１枚カードとして置かれている」単位
+  id          String   @id @default(cuid())
+  bookstoreId String
+  bookId      String
+  sortOrder   Int                      // 本棚内の並び順（1,2,3,...）
+  comment     String?                  // 店長の紹介文
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  user  User  @relation(fields: [userId], references: [id])
-  book  Book  @relation(fields: [bookId], references: [id])
-  links UserBookLink[]
+  bookstore Bookstore @relation(fields: [bookstoreId], references: [id])
+  book      Book      @relation(fields: [bookId], references: [id])
+  links     UserBookLink[]
 
-  @@unique([userId, bookId])         // 同じ本を同じ棚に二重登録しない
-  @@index([userId])
+  @@unique([bookstoreId, bookId])     // 同じ本を同じ棚に二重登録しない
+  @@index([bookstoreId])
   @@index([bookId])
 }
 

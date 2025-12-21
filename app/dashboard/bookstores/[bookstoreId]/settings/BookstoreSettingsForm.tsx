@@ -1,39 +1,37 @@
-// app/dashboard/settings/AccountSettingsForm.tsx
+// app/dashboard/bookstores/[bookstoreId]/settings/BookstoreSettingsForm.tsx
 'use client';
 
 import { useState, useTransition, FormEvent } from 'react';
 import Link from 'next/link';
-import { SignOutButton } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
-type User = {
+type Bookstore = {
   id: string;
-  clerkId: string;
   handle: string | null;
   displayName: string | null;
   bookstoreTitle: string | null;
   theme: string;
   bio: string | null;
-  amazonAssociateTag: string | null;
-  isPro: boolean;
 };
 
 type Props = {
-  user: User;
+  bookstore: Bookstore;
 };
 
-export default function AccountSettingsForm({ user }: Props) {
-  const [handle, setHandle] = useState(user.handle ?? '');
-  const [displayName, setDisplayName] = useState(user.displayName ?? '');
+export default function BookstoreSettingsForm({ bookstore }: Props) {
+  const router = useRouter();
+  const [handle, setHandle] = useState(bookstore.handle ?? '');
+  const [displayName, setDisplayName] = useState(bookstore.displayName ?? '');
   const [bookstoreTitle, setBookstoreTitle] = useState(
-    user.bookstoreTitle ?? '',
+    bookstore.bookstoreTitle ?? '',
   );
-  const [theme, setTheme] = useState(user.theme ?? 'default');
-  const [bio, setBio] = useState(user.bio ?? '');
-  const [amazonTag, setAmazonTag] = useState(user.amazonAssociateTag ?? '');
+  const [theme, setTheme] = useState(bookstore.theme ?? 'default');
+  const [bio, setBio] = useState(bookstore.bio ?? '');
 
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -41,7 +39,7 @@ export default function AccountSettingsForm({ user }: Props) {
     setError(null);
 
     // 軽いバリデーション（a〜z,0〜9,_ だけ許可など）
-    if (!/^[a-z0-9_]{3,20}$/.test(handle)) {
+    if (handle && !/^[a-z0-9_]{3,20}$/.test(handle)) {
       setError(
         '書店IDは 3〜20 文字の半角英数字とアンダースコアにしてください。',
       );
@@ -49,18 +47,15 @@ export default function AccountSettingsForm({ user }: Props) {
     }
 
     startTransition(async () => {
-      const res = await fetch('/api/settings/profile', {
+      const res = await fetch(`/api/bookstores/${bookstore.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          handle,
+          handle: handle || null,
           displayName: displayName || null,
           bookstoreTitle: bookstoreTitle || null,
           theme,
           bio: bio || null,
-          // 無料ユーザーはサーバー側でも無視する前提だけど、
-          // 念のためクライアントでも null にして送る
-          amazonAssociateTag: user.isPro ? amazonTag || null : null,
         }),
       });
 
@@ -70,7 +65,40 @@ export default function AccountSettingsForm({ user }: Props) {
         return;
       }
       setMessage('保存しました。');
+      // ダッシュボードにリダイレクト
+      router.push(`/dashboard?bookstore=${bookstore.id}`);
     });
+  };
+
+  const handleDelete = async () => {
+    if (
+      !confirm(
+        `「${bookstore.bookstoreTitle || bookstore.handle || 'この書店'}」を削除しますか？この操作は取り消せません。`,
+      )
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/bookstores/${bookstore.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || '削除に失敗しました。');
+        return;
+      }
+
+      // ダッシュボードにリダイレクト
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('Delete error:', err);
+      alert('削除に失敗しました。');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -225,73 +253,11 @@ export default function AccountSettingsForm({ user }: Props) {
         </select>
       </div>
 
-      {/* Amazon アソシエイトタグ（Pro 限定） */}
-      <div>
-        <label
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            display: 'block',
-            marginBottom: 4,
-          }}
-        >
-          Amazon アソシエイトタグ（Pro限定）
-        </label>
-        <input
-          type="text"
-          value={amazonTag}
-          onChange={(e) => setAmazonTag(e.target.value)}
-          placeholder="例: yourtag-22"
-          disabled={!user.isPro}
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 999,
-            border: '1px solid #d1d5db',
-            fontSize: 14,
-            background: user.isPro ? '#fff' : '#f3f4f6',
-            color: user.isPro ? '#111827' : '#9ca3af',
-          }}
-        />
-        <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
-          {user.isPro
-            ? '登録したタグで Amazon リンクが生成されます。'
-            : '現在は無料プランです。アフィリエイトタグは設定できません。'}
-        </p>
-
-        {!user.isPro && (
-          <button
-            type="button"
-            onClick={() => {
-              // Stripe のチェックアウトに飛ばす実装をあとで入れる
-              alert('Proプランの購入フローはあとで実装する想定。');
-            }}
-            style={{
-              marginTop: 8,
-              padding: '10px 18px',
-              borderRadius: 999,
-              border: 'none',
-              background: '#2563eb',
-              color: '#ffffff',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Proプランにアップグレードしてタグを設定する
-          </button>
-        )}
-      </div>
-
       {error && (
-        <p style={{ color: '#dc2626', fontSize: 13 }}>
-          {error}
-        </p>
+        <p style={{ color: '#dc2626', fontSize: 13 }}>{error}</p>
       )}
       {message && (
-        <p style={{ color: '#16a34a', fontSize: 13 }}>
-          {message}
-        </p>
+        <p style={{ color: '#16a34a', fontSize: 13 }}>{message}</p>
       )}
 
       {/* 保存＋戻るボタン */}
@@ -320,7 +286,7 @@ export default function AccountSettingsForm({ user }: Props) {
         </button>
 
         <Link
-          href="/dashboard"
+          href={`/dashboard?bookstore=${bookstore.id}`}
           style={{
             padding: '10px 20px',
             borderRadius: 999,
@@ -335,7 +301,7 @@ export default function AccountSettingsForm({ user }: Props) {
         </Link>
       </div>
 
-      {/* ログアウト */}
+      {/* 書店の削除 */}
       <div
         style={{
           marginTop: 32,
@@ -351,26 +317,31 @@ export default function AccountSettingsForm({ user }: Props) {
             color: '#111827',
           }}
         >
-          ログアウト
+          書店の削除
         </h2>
-        <SignOutButton>
-          <button
-            type="button"
-            style={{
-              padding: '10px 20px',
-              borderRadius: 999,
-              border: '1px solid #fecaca',
-              background: '#fee2e2',
-              color: '#b91c1c',
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: 'pointer',
-            }}
-          >
-            ログアウト
-          </button>
-        </SignOutButton>
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
+          この書店とすべての本を削除します。この操作は取り消せません。
+        </p>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={isDeleting}
+          style={{
+            padding: '10px 20px',
+            borderRadius: 999,
+            border: '1px solid #fecaca',
+            background: '#fee2e2',
+            color: '#b91c1c',
+            fontWeight: 600,
+            fontSize: 14,
+            cursor: isDeleting ? 'not-allowed' : 'pointer',
+            opacity: isDeleting ? 0.6 : 1,
+          }}
+        >
+          {isDeleting ? '削除中…' : '書店を削除する'}
+        </button>
       </div>
     </form>
   );
 }
+

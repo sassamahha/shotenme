@@ -58,9 +58,14 @@ function linkifyBio(text: string): ReactNode {
 export default async function UserStorePage({ params }: PageProps) {
   const { handle } = await params;
 
-  const user = await prisma.user.findUnique({
+  const bookstore = await prisma.bookstore.findUnique({
     where: { handle },
     include: {
+      owner: {
+        select: {
+          amazonAssociateTag: true,
+        },
+      },
       books: {
         where: { isPublic: true },
         orderBy: { sortOrder: 'asc' },
@@ -69,7 +74,7 @@ export default async function UserStorePage({ params }: PageProps) {
     },
   });
 
-  if (!user) {
+  if (!bookstore) {
     return (
       <main style={{ padding: '40px' }}>
         <p>この本屋は見つかりませんでした。</p>
@@ -77,12 +82,12 @@ export default async function UserStorePage({ params }: PageProps) {
     );
   }
 
-  const title = user.bookstoreTitle || `@${user.handle} の本屋`;
-  const bg = resolveBackground(user.theme);
+  const title = bookstore.bookstoreTitle || `@${bookstore.handle} の本屋`;
+  const bg = resolveBackground(bookstore.theme);
 
-  // ★ アフィリエイトタグを決定（amazonAssociateTagが設定されていれば優先、それ以外は共通タグ）
-  // テスト用：isProに関係なく、amazonAssociateTagが設定されていれば使用
-  const affiliateTag = user.amazonAssociateTag || 'shotenme-22';
+  // ★ アフィリエイトタグを決定（ownerのamazonAssociateTagが設定されていれば優先、それ以外は共通タグ）
+  // 全書店共通のアフィリエイトタグ
+  const affiliateTag = bookstore.owner.amazonAssociateTag || 'shotenme-22';
 
   return (
     <main
@@ -111,9 +116,9 @@ export default async function UserStorePage({ params }: PageProps) {
             {title}
           </h1>
           <p style={{ fontSize: 13, color: '#6b7280' }}>
-            店長：{user.displayName ?? ''}
+            店長：{bookstore.displayName ?? ''}
           </p>
-          {user.bio && (
+          {bookstore.bio && (
             <p
               style={{
                 marginTop: 12,
@@ -124,19 +129,19 @@ export default async function UserStorePage({ params }: PageProps) {
                 whiteSpace: 'pre-wrap',
               }}
             >
-              {linkifyBio(user.bio)}
+              {linkifyBio(bookstore.bio)}
             </p>
           )}
         </header>
 
         {/* 本カード一覧（スマホ2 / PC4 カラム） */}
-        {user.books.length === 0 ? (
+        {bookstore.books.length === 0 ? (
           <p style={{ fontSize: 14, color: '#6b7280' }}>
             まだ公開している本がありません。
           </p>
         ) : (
           <section className="book-grid">
-            {user.books.map((ub) => (
+            {bookstore.books.map((ub) => (
               <BookCard
                 key={ub.id}
                 userBook={ub}

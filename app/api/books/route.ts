@@ -11,6 +11,7 @@ import {
 
 type PostBody = {
   mode: 'isbn' | 'asin' | 'url';
+  bookstoreId: string; // 書店IDを必須に
   isbn?: string;
   asin?: string;
   url?: string;
@@ -40,6 +41,34 @@ export async function POST(req: NextRequest) {
           message: '認証が必要です。',
         },
         { status: 401 },
+      );
+    }
+
+    // bookstoreIdを取得
+    const bookstoreId = body.bookstoreId;
+    if (!bookstoreId) {
+      return NextResponse.json(
+        {
+          message: 'bookstoreId が必要です。',
+        },
+        { status: 400 },
+      );
+    }
+
+    // 書店が存在し、所有者であることを確認
+    const bookstore = await prisma.bookstore.findFirst({
+      where: {
+        id: bookstoreId,
+        ownerId: user.id,
+      },
+    });
+
+    if (!bookstore) {
+      return NextResponse.json(
+        {
+          message: '書店が見つかりません。',
+        },
+        { status: 404 },
       );
     }
 
@@ -166,16 +195,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 並び順：そのユーザーの最大 sortOrder + 1
+    // 並び順：その書店の最大 sortOrder + 1
     const agg = await prisma.userBook.aggregate({
-      where: { userId: user.id },
+      where: { bookstoreId: bookstore.id },
       _max: { sortOrder: true },
     });
     const nextSortOrder = (agg._max.sortOrder ?? 0) + 1;
 
     const userBook = await prisma.userBook.create({
       data: {
-        userId: user.id,
+        bookstoreId: bookstore.id,
         bookId: book.id,
         sortOrder: nextSortOrder,
         comment: commentForDb,
@@ -184,12 +213,13 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ userBookId: userBook.id }, { status: 201 });
-  } catch (err: any) {
+  } catch (err) {
     console.error('POST /api/books error', err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
       {
         message: 'サーバーエラーが発生しました。',
-        detail: err?.message ?? String(err),
+        detail: errorMessage,
       },
       { status: 500 },
     );
