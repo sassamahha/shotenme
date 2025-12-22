@@ -191,8 +191,23 @@ export default function Sidebar({ bookstores, currentBookstoreId: initialBooksto
         <span>書店を追加</span>
       </Link>
 
-      {/* アカウント設定 */}
-      <div style={{ marginTop: 'auto', paddingTop: 24, borderTop: '1px solid #e5e7eb' }}>
+      {/* アカウント設定（スマホでは上部に表示） */}
+      <div 
+        style={{ 
+          ...(isMobile ? {
+            marginTop: 0,
+            marginBottom: 'auto',
+            paddingTop: 0,
+            paddingBottom: 24,
+            borderTop: 'none',
+            borderBottom: '1px solid #e5e7eb',
+          } : {
+            marginTop: 'auto',
+            paddingTop: 24,
+            borderTop: '1px solid #e5e7eb',
+          })
+        }}
+      >
         <Link
           href="/dashboard/account"
           onClick={() => setIsOpen(false)}
