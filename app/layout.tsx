@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://shoten.me"),
   openGraph: {
-  title: "Shoten.me",
+  title: "Shoten.me｜あなたの本棚、今日から「書店」",
   description: "あなたの本棚、今日から「書店」。読んだ本・推した本を棚に並べるだけの書店をつくるサービス",
   url: "/",
   siteName: "Shoten.me",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Shoten.me",
+    title: "Shoten.me｜あなたの本棚、今日から「書店」",
     description: "あなたの本棚、今日から「書店」。読んだ本・推した本を棚に並べるだけの書店をつくるサービス",
     images: ["/og-image.png"],
   },
