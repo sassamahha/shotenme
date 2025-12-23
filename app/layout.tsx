@@ -14,8 +14,32 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://shoten.me"),
   title: "Shoten.me",
-  description: "個人店長ごとの「本屋ページ」を最短で作るサービス",
+  description: "あなたの本棚、今日から「書店」。読んだ本・推した本を棚に並べるだけの書店をつくるサービス",
+  openGraph: {
+    type: "website",
+    url: "https://shoten.me",
+    title: "Shoten.me",
+    description: "あなたの本棚、今日から「書店」。読んだ本・推した本を棚に並べるだけの書店をつくるサービス",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Shoten.me",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Shoten.me",
+    description: "あなたの本棚、今日から「書店」。読んだ本・推した本を棚に並べるだけの書店をつくるサービス",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
