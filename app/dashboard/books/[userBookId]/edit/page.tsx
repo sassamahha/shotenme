@@ -48,6 +48,7 @@ export default async function EditBookPage({ params }: PageProps) {
   }
 
   const { book } = userBook;
+  const bookstoreId = userBook.bookstore.id;
 
   return (
     <main style={{ padding: '32px 24px' }}>
@@ -55,7 +56,7 @@ export default async function EditBookPage({ params }: PageProps) {
         本の情報を編集する
       </h1>
       <Link
-          href="/dashboard"
+          href={`/dashboard?bookstore=${bookstoreId}`}
           style={{
             margin: '16px 0px',
             padding: '10px 16px',
@@ -70,6 +71,7 @@ export default async function EditBookPage({ params }: PageProps) {
 
       <EditBookForm
         userBookId={userBookId}
+        bookstoreId={bookstoreId}
         initial={{
           title: book.title,
           author: book.author ?? '',

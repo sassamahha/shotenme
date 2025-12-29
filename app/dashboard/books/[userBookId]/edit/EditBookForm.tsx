@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 type EditBookFormProps = {
   userBookId: string;
+  bookstoreId: string;
   initial: {
     title: string;
     author: string;
@@ -16,7 +17,7 @@ type EditBookFormProps = {
   };
 };
 
-export default function EditBookForm({ userBookId, initial }: EditBookFormProps) {
+export default function EditBookForm({ userBookId, bookstoreId, initial }: EditBookFormProps) {
   const router = useRouter();
 
   const [title, setTitle] = useState(initial.title ?? '');
@@ -52,7 +53,7 @@ export default function EditBookForm({ userBookId, initial }: EditBookFormProps)
         throw new Error(data.message || '更新に失敗しました。');
       }
 
-      router.push('/dashboard');
+      router.push(`/dashboard?bookstore=${bookstoreId}`);
       router.refresh();
     } catch (err) {
       console.error(err);
@@ -79,7 +80,7 @@ export default function EditBookForm({ userBookId, initial }: EditBookFormProps)
         throw new Error(data.message || '削除に失敗しました。');
       }
 
-      router.push('/dashboard');
+      router.push(`/dashboard?bookstore=${bookstoreId}`);
       router.refresh();
     } catch (err) {
       console.error(err);
