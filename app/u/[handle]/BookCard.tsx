@@ -10,9 +10,10 @@ type UserBookWithBook = UserBook & { book: Book };
 type Props = {
   userBook: UserBookWithBook;
   affiliateTag: string; // ★ 追加：使うタグを外から渡す
+  theme?: string | null; // 書店のテーマカラー
 };
 
-export default function BookCard({ userBook, affiliateTag }: Props) {
+export default function BookCard({ userBook, affiliateTag, theme }: Props) {
   const b = userBook.book;
 
   // imageUrl が有効なHTTP(S) URLかチェック
@@ -29,6 +30,32 @@ export default function BookCard({ userBook, affiliateTag }: Props) {
   // ★ 共通で使う Amazon リンク
   const amazonUrl = `https://www.amazon.co.jp/dp/${b.asin}?tag=${affiliateTag}`;
 
+  // 推薦文の1行目を抽出（30-40文字で切り詰め）
+  const getFirstLine = (comment: string | null): string | null => {
+    if (!comment || comment.trim().length === 0) return null;
+    const firstLine = comment.split('\n')[0].trim();
+    if (firstLine.length === 0) return null;
+    // 35文字で切り詰め（30-40文字の中央値）
+    return firstLine.length > 35 ? firstLine.slice(0, 35) + '...' : firstLine;
+  };
+
+  const firstLine = getFirstLine(userBook.comment);
+  const hasFirstLine = !!firstLine;
+
+  // テーマカラーに基づく帯の背景色
+  const getObiBackgroundColor = (theme?: string | null): string => {
+    switch (theme) {
+      case 'warm':
+        return '#fef3e2'; // 薄いオレンジ系
+      case 'paper':
+        return '#fdfaf3'; // オフホワイト
+      default:
+        return '#f3f4f6'; // デフォルト：薄いグレー
+    }
+  };
+
+  const obiBackgroundColor = getObiBackgroundColor(theme);
+
   return (
     <>
       <article
@@ -42,42 +69,77 @@ export default function BookCard({ userBook, affiliateTag }: Props) {
           flexDirection: 'column',
         }}
       >
-        {/* カバー画像 */}
+        {/* カバー画像と帯 */}
         <div
           style={{
             position: 'relative',
             width: '100%',
-            paddingTop: '150%', // 2:3 の縦長
-            background: '#e5e7eb',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
           }}
         >
-          {hasValidImage && !imageError && b.imageUrl ? (
-            <Image
-              src={b.imageUrl}
-              alt={b.title}
-              fill
-              sizes="(min-width: 1024px) 260px, 80vw"
-              style={{ objectFit: 'cover' }}
-              onError={() => setImageError(true)}
-            />
-          ) : (
+          {/* カバー画像 */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              paddingTop: '150%', // 2:3 の縦長
+              background: '#e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {hasValidImage && !imageError && b.imageUrl ? (
+              <Image
+                src={b.imageUrl}
+                alt={b.title}
+                fill
+                sizes="(min-width: 1024px) 260px, 80vw"
+                style={{ objectFit: 'cover' }}
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#9ca3af',
+                  fontSize: 14,
+                  textAlign: 'center',
+                  padding: '16px',
+                }}
+              >
+                表紙画像なし
+              </div>
+            )}
+          </div>
+
+          {/* 帯（推薦文の1行目）- 書影の下部に被さる形で配置 */}
+          {hasFirstLine && (
             <div
+              onClick={() => setOpen(true)}
               style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#9ca3af',
-                fontSize: 14,
-                textAlign: 'center',
-                padding: '16px',
+                marginTop: '-40px', // 書影に被さる（ネガティブマージン）
+                position: 'relative',
+                zIndex: 1, // 書影より前面に
+                width: '100%',
+                padding: '10px 14px',
+                background: 'rgba(255, 255, 255, 0.7)', // 半透明白
+                backdropFilter: 'blur(2px)', // すりガラス効果
+                fontSize: 12,
+                lineHeight: 1.4,
+                color: '#374151',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)', // 上方向に薄い影
+                borderTop: '1px solid rgba(0, 0, 0, 0.05)',
               }}
             >
-              表紙画像なし
+              {firstLine}
             </div>
           )}
         </div>

@@ -311,12 +311,12 @@ export default function NewBookPage() {
           />
         </div>
 
-        <div>
-          <label
-            style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
-          >
-            紹介コメント（任意）
-          </label>
+            <div>
+              <label
+                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
+              >
+                推薦文：１行目が帯になります。
+              </label>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}

@@ -194,13 +194,13 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
         </p>
       </div>
 
-      {/* 紹介コメント */}
+      {/* 推薦文 */}
       <div>
         <label
           htmlFor="comment"
           style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 6 }}
         >
-          紹介コメント
+          推薦文：１行目が帯になります。
         </label>
         <textarea
           id="comment"

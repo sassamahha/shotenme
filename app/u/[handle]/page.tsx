@@ -2,11 +2,62 @@
 import { prisma } from '@/lib/prisma';
 import BookCard from './BookCard';
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
 
 type PageProps = {
   // Next 16: params は Promise で渡ってくる
   params: Promise<{ handle: string }>;
 };
+
+// 動的OGP生成
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { handle } = await params;
+  const bookstore = await prisma.bookstore.findUnique({
+    where: { handle },
+    include: {
+      books: {
+        where: { isPublic: true },
+        orderBy: { sortOrder: 'asc' },
+        take: 1, // OGP画像用に最初の1冊を取得
+        include: { book: true },
+      },
+    },
+  });
+
+  if (!bookstore) {
+    return {
+      title: '書店が見つかりません | Shoten.me',
+    };
+  }
+
+  const title = bookstore.bookstoreTitle || `@${bookstore.handle} の本屋`;
+  const description = bookstore.bio || `${title}の本棚です。`;
+  const ogImageUrl = `https://shoten.me/api/og/${handle}`;
+
+  return {
+    title: `${title} | Shoten.me`,
+    description,
+    openGraph: {
+      title: `${title} | Shoten.me`,
+      description,
+      url: `https://shoten.me/@${handle}`,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | Shoten.me`,
+      description,
+      images: [ogImageUrl],
+    },
+  };
+}
 
 function resolveBackground(theme?: string | null): string {
   switch (theme) {
@@ -145,7 +196,8 @@ export default async function UserStorePage({ params }: PageProps) {
               <BookCard
                 key={ub.id}
                 userBook={ub}
-                affiliateTag={affiliateTag} 
+                affiliateTag={affiliateTag}
+                theme={bookstore.theme}
               />
             ))}
           </section>
