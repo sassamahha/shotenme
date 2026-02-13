@@ -9,8 +9,8 @@ type UserBookWithBook = UserBook & { book: Book };
 
 type Props = {
   userBook: UserBookWithBook;
-  affiliateTag: string; // ★ 追加：使うタグを外から渡す
-  theme?: string | null; // 書店のテーマカラー
+  affiliateTag: string;
+  theme?: string | null;
 };
 
 export default function BookCard({ userBook, affiliateTag, theme }: Props) {

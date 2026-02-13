@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { siteOrigin } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://shoten.me"),
+  metadataBase: new URL(siteOrigin),
   openGraph: {
   title: "Shoten.me｜あなたの本棚、今日から「書店」",
   description: "あなたの本棚、今日から「書店」。読んだ本・推した本を棚に並べるだけの書店をつくるサービス",

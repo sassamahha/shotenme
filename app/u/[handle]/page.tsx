@@ -1,5 +1,8 @@
 // app/u/[handle]/page.tsx
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { siteOrigin } from '@/lib/site';
+import { Share2 } from 'lucide-react';
 import BookCard from './BookCard';
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
@@ -32,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title = bookstore.bookstoreTitle || `@${bookstore.handle} の本屋`;
   const description = bookstore.bio || `${title}の本棚です。`;
-  const ogImageUrl = `https://shoten.me/api/og/${handle}`;
+  const ogImageUrl = `${siteOrigin}/api/og/${handle}`;
 
   return {
     title: `${title} | Shoten.me`,
@@ -40,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title: `${title} | Shoten.me`,
       description,
-      url: `https://shoten.me/@${handle}`,
+      url: `${siteOrigin}/@${handle}`,
       images: [
         {
           url: ogImageUrl,
@@ -202,6 +205,48 @@ export default async function UserStorePage({ params }: PageProps) {
             ))}
           </section>
         )}
+
+        {/* 書店フッター: シェアボタン + Shoten.me（中央配置） */}
+        <footer
+          style={{
+            marginTop: 48,
+            paddingTop: 24,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          {bookstore.handle && (
+            <Link
+              href={`/u/${bookstore.handle}/share`}
+              title="シェア用画像を見る"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: '#ffffff',
+                color: '#4b5563',
+                textDecoration: 'none',
+              }}
+            >
+              <Share2 size={24} strokeWidth={1.8} />
+            </Link>
+          )}
+          <Link
+            href="/"
+            style={{
+              fontSize: 12,
+              color: '#9ca3af',
+              textDecoration: 'none',
+            }}
+          >
+            Shoten.me
+          </Link>
+        </footer>
       </div>
     </main>
   );
