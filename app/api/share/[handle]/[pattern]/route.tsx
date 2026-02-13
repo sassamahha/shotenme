@@ -9,14 +9,14 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ handle: string; pattern: string }> }
 ) {
-  const { handle, pattern } = await params;
-
-  const patternConfig = getShareImagePattern(pattern);
-  if (!patternConfig) {
-    return new Response('Not Found', { status: 404 });
-  }
-
   try {
+    const { handle, pattern } = await params;
+
+    const patternConfig = getShareImagePattern(pattern);
+    if (!patternConfig) {
+      return new Response('Not Found', { status: 404 });
+    }
+
     const bookstore = await prisma.bookstore.findUnique({
       where: { handle },
       include: {
@@ -54,8 +54,12 @@ export async function GET(
     );
 
     return response;
-  } catch (error) {
-    console.error('Share image generation error:', error);
-    return new Response('Failed to generate image', { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    return new Response(
+      JSON.stringify({ error: message, stack }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }

@@ -6,9 +6,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ handle: string }> }
 ) {
-  const { handle } = await params;
-
   try {
+    const { handle } = await params;
+
     const bookstore = await prisma.bookstore.findUnique({
       where: { handle },
       include: {
@@ -157,9 +157,13 @@ export async function GET(
         height: 630,
       }
     );
-  } catch (error) {
-    console.error('OG image generation error:', error);
-    return new Response('Failed to generate image', { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    return new Response(
+      JSON.stringify({ error: message, stack }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
 
