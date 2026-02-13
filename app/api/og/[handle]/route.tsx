@@ -18,13 +18,6 @@ export async function GET(
           take: 3, // 最大3冊の書影
           include: { book: true },
         },
-        _count: {
-          select: {
-            books: {
-              where: { isPublic: true },
-            },
-          },
-        },
       },
     });
 
@@ -32,12 +25,15 @@ export async function GET(
       return new Response('Bookstore not found', { status: 404 });
     }
 
+    const bookCount = await prisma.userBook.count({
+      where: { bookstoreId: bookstore.id, isPublic: true },
+    });
+
     const title = bookstore.bookstoreTitle || `@${bookstore.handle}`;
     const displayName = bookstore.displayName || '';
     const bio = bookstore.bio
       ? bookstore.bio.split('\n')[0].slice(0, 60) + (bookstore.bio.length > 60 ? '...' : '')
       : '';
-    const bookCount = bookstore._count.books;
 
     // テーマカラーに基づく背景色
     const getBackgroundColor = (theme?: string | null): string => {
