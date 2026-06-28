@@ -98,9 +98,11 @@ async function callApi(
     ...params,
   });
   try {
-    // 新APIは Referer 必須（登録アプリURLと一致させる）。node:https で確実に送る。
+    // 新APIは Origin（＋Referer）必須。どちらも fetch(undici) が禁止ヘッダーとして
+    // 削除するため node:https で直送する。ドメインは楽天アプリの「許可サイト」に要登録。
     const res = await httpGetJson(`${ENDPOINT}?${qs.toString()}`, {
-      Referer: siteOrigin,
+      Origin: siteOrigin,
+      Referer: `${siteOrigin}/`,
       'User-Agent': 'shoten.me/1.0',
     });
     if (res.status !== 200) {
