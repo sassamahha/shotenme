@@ -6,8 +6,36 @@
 //  - ドメイン app.rakuten.co.jp → openapi.rakuten.co.jp（旧は2026-05-14停止）
 //  - applicationId（UUID）に加えて accessKey（pk_始まり）が必須＝二重認証
 //  - Referer ヘッダー必須（登録アプリURLと一致させる。403対策）
+import https from 'node:https';
 import type { AffiliateUser } from './amazon';
 import { siteOrigin } from './site';
+
+// Referer を確実に送るため node:https を使う。
+// （グローバル fetch=undici は Referer を「禁止ヘッダー」として削除してしまい、
+//  楽天新APIが REQUEST_CONTEXT_BODY_HTTP_REFERRER_MISSING(403) を返す。）
+function httpGetJson(
+  url: string,
+  headers: Record<string, string>,
+): Promise<{ status: number; json: unknown; raw: string }> {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers }, (res) => {
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', (c) => (data += c));
+      res.on('end', () => {
+        let json: unknown = null;
+        try {
+          json = JSON.parse(data);
+        } catch {
+          /* 非JSONはそのまま raw で扱う */
+        }
+        resolve({ status: res.statusCode ?? 0, json, raw: data });
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
 
 const ENDPOINT =
   'https://openapi.rakuten.co.jp/services/api/BooksBook/Search/20170404';
@@ -70,19 +98,18 @@ async function callApi(
     ...params,
   });
   try {
-    const res = await fetch(`${ENDPOINT}?${qs.toString()}`, {
-      // 新APIは Referer 必須（登録アプリURLと一致させる）
-      headers: { Referer: siteOrigin },
-      next: { revalidate: 60 * 60 * 24 }, // 1日キャッシュ
+    // 新APIは Referer 必須（登録アプリURLと一致させる）。node:https で確実に送る。
+    const res = await httpGetJson(`${ENDPOINT}?${qs.toString()}`, {
+      Referer: siteOrigin,
+      'User-Agent': 'shoten.me/1.0',
     });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
+    if (res.status !== 200) {
       console.error(
-        `[rakuten] HTTP ${res.status} referer=${siteOrigin} body=${body.slice(0, 200)}`,
+        `[rakuten] HTTP ${res.status} referer=${siteOrigin} body=${res.raw.slice(0, 200)}`,
       );
       return [];
     }
-    const json = await res.json();
+    const json = res.json as { Items?: unknown[] };
     // formatVersion=2 では Items は配列（各要素が Item 本体）
     const items = Array.isArray(json.Items) ? json.Items : [];
     // formatVersion 差異を吸収（Item ラップの有無）
