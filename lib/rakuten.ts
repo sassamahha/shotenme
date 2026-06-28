@@ -56,6 +56,10 @@ async function callApi(
 ): Promise<RakutenApiItem[]> {
   if (!APP_ID || !ACCESS_KEY) {
     // 未設定なら静かにスキップ（openBD / Google Books へフォールバックさせる）
+    console.log('[rakuten] skip: missing env', {
+      appId: !!APP_ID,
+      accessKey: !!ACCESS_KEY,
+    });
     return [];
   }
   const qs = new URLSearchParams({
@@ -71,7 +75,13 @@ async function callApi(
       headers: { Referer: siteOrigin },
       next: { revalidate: 60 * 60 * 24 }, // 1日キャッシュ
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error(
+        `[rakuten] HTTP ${res.status} referer=${siteOrigin} body=${body.slice(0, 200)}`,
+      );
+      return [];
+    }
     const json = await res.json();
     // formatVersion=2 では Items は配列（各要素が Item 本体）
     const items = Array.isArray(json.Items) ? json.Items : [];

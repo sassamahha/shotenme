@@ -147,8 +147,11 @@ export async function resolveInput(inputRaw: string): Promise<ResolveResult> {
       };
     });
 
+  console.log(`[ingest] keyword="${input}" rakutenHits=${rkHits.length}`);
+
   if (candidates.length === 0) {
     const ggHits = await searchGoogleBooksByKeyword(input);
+    console.log(`[ingest] google fallback hits=${ggHits.length}`);
     candidates = ggHits
       .filter((h) => h.isbn13 || h.isbn10)
       .map((h) => {
