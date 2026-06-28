@@ -77,7 +77,8 @@ export default async function EditBookPage({ params }: PageProps) {
           author: book.author ?? '',
           asin: book.asin,
           imageUrl: book.imageUrl ?? '',
-          comment: userBook.comment ?? '',
+          obi: userBook.obi ?? '',
+          note: userBook.note ?? '',
           isPublic: userBook.isPublic,
         }}
       />

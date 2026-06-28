@@ -94,7 +94,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const userBooks = bookstore.books.map((ub) => ({
     id: ub.id,
     sortOrder: ub.sortOrder,
-    comment: ub.comment,
+    obi: ub.obi,
     isPublic: ub.isPublic,
     book: {
       id: ub.book.id,

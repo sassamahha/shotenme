@@ -9,52 +9,46 @@ type UserBookWithBook = UserBook & { book: Book };
 
 type Props = {
   userBook: UserBookWithBook;
-  affiliateTag: string;
+  amazonUrl: string;
+  rakutenUrl: string | null;
   theme?: string | null;
 };
 
-export default function BookCard({ userBook, affiliateTag, theme }: Props) {
+const buyButtonBase: React.CSSProperties = {
+  width: '100%',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '8px 10px',
+  borderRadius: 999,
+  fontWeight: 600,
+  fontSize: 13,
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
+};
+
+export default function BookCard({ userBook, amazonUrl, rakutenUrl, theme }: Props) {
   const b = userBook.book;
 
-  // imageUrl が有効なHTTP(S) URLかチェック
   const hasValidImage =
     b.imageUrl &&
     b.imageUrl.trim().length > 0 &&
     (b.imageUrl.startsWith('http://') || b.imageUrl.startsWith('https://'));
 
-  const hasComment = !!userBook.comment && userBook.comment.trim().length > 0;
+  // 帯 = obi（1行）/ ノート = note（長文・任意）
+  const obi = userBook.obi?.trim() || null;
+  const note = userBook.note?.trim() || null;
+  const hasNote = !!note;
 
   const [open, setOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // ★ 共通で使う Amazon リンク
-  const amazonUrl = `https://www.amazon.co.jp/dp/${b.asin}?tag=${affiliateTag}`;
-
-  // 推薦文の1行目を抽出（30-40文字で切り詰め）
-  const getFirstLine = (comment: string | null): string | null => {
-    if (!comment || comment.trim().length === 0) return null;
-    const firstLine = comment.split('\n')[0].trim();
-    if (firstLine.length === 0) return null;
-    // 35文字で切り詰め（30-40文字の中央値）
-    return firstLine.length > 35 ? firstLine.slice(0, 35) + '...' : firstLine;
-  };
-
-  const firstLine = getFirstLine(userBook.comment);
-  const hasFirstLine = !!firstLine;
-
-  // テーマカラーに基づく帯の背景色
-  const getObiBackgroundColor = (theme?: string | null): string => {
-    switch (theme) {
-      case 'warm':
-        return '#fef3e2'; // 薄いオレンジ系
-      case 'paper':
-        return '#fdfaf3'; // オフホワイト
-      default:
-        return '#f3f4f6'; // デフォルト：薄いグレー
-    }
-  };
-
-  const obiBackgroundColor = getObiBackgroundColor(theme);
+  // 帯の表示は1行・はみ出しは省略
+  const obiPreview = obi
+    ? obi.length > 35
+      ? obi.slice(0, 35) + '…'
+      : obi
+    : null;
 
   return (
     <>
@@ -69,19 +63,12 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
           flexDirection: 'column',
         }}
       >
-        {/* カバー画像と帯 */}
-        <div
-          style={{
-            position: 'relative',
-            width: '100%',
-          }}
-        >
-          {/* カバー画像 */}
+        <div style={{ position: 'relative', width: '100%' }}>
           <div
             style={{
               position: 'relative',
               width: '100%',
-              paddingTop: '150%', // 2:3 の縦長
+              paddingTop: '150%',
               background: '#e5e7eb',
               display: 'flex',
               alignItems: 'center',
@@ -116,35 +103,34 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
             )}
           </div>
 
-          {/* 帯（推薦文の1行目）- 書影の下部に被さる形で配置 */}
-          {hasFirstLine && (
+          {/* 帯（obi）- 書影の下部に被さる */}
+          {obiPreview && (
             <div
-              onClick={() => setOpen(true)}
+              onClick={() => hasNote && setOpen(true)}
               style={{
-                marginTop: '-40px', // 書影に被さる（ネガティブマージン）
+                marginTop: '-40px',
                 position: 'relative',
-                zIndex: 1, // 書影より前面に
+                zIndex: 1,
                 width: '100%',
                 padding: '10px 14px',
-                background: 'rgba(255, 255, 255, 0.7)', // 半透明白
-                backdropFilter: 'blur(2px)', // すりガラス効果
+                background: 'rgba(255, 255, 255, 0.7)',
+                backdropFilter: 'blur(2px)',
                 fontSize: 12,
                 lineHeight: 1.4,
                 color: '#374151',
-                cursor: 'pointer',
+                cursor: hasNote ? 'pointer' : 'default',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)', // 上方向に薄い影
+                boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)',
                 borderTop: '1px solid rgba(0, 0, 0, 0.05)',
               }}
             >
-              {firstLine}
+              {obiPreview}
             </div>
           )}
         </div>
 
-        {/* 本文 */}
         <div style={{ padding: '16px 18px 18px' }}>
           <h2
             style={{
@@ -158,18 +144,11 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
           </h2>
 
           {b.author && (
-            <p
-              style={{
-                fontSize: 12,
-                color: '#6b7280',
-                marginBottom: 8,
-              }}
-            >
+            <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
               {b.author}
             </p>
           )}
 
-          {/* ボタン行 */}
           <div
             style={{
               display: 'flex',
@@ -178,7 +157,7 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
               marginTop: 12,
             }}
           >
-            {hasComment && (
+            {hasNote && (
               <button
                 type="button"
                 onClick={() => setOpen(true)}
@@ -192,28 +171,26 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
                   cursor: 'pointer',
                 }}
               >
-                推薦文
+                ノートを読む
               </button>
+            )}
+
+            {rakutenUrl && (
+              <Link
+                href={rakutenUrl}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                style={{ ...buyButtonBase, background: '#bf0000', color: '#fff' }}
+              >
+                楽天で見る
+              </Link>
             )}
 
             <Link
               href={amazonUrl}
               target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                width: '100%',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '8px 10px',
-                borderRadius: 999,
-                background: '#fbbf24',
-                color: '#1f2937',
-                fontWeight: 600,
-                fontSize: 13,
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-              }}
+              rel="noopener noreferrer sponsored"
+              style={{ ...buyButtonBase, background: '#fbbf24', color: '#1f2937' }}
             >
               Amazonで見る
             </Link>
@@ -221,8 +198,8 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
         </div>
       </article>
 
-      {/* 推薦文モーダル */}
-      {open && hasComment && (
+      {/* ノートモーダル */}
+      {open && hasNote && (
         <div
           onClick={() => setOpen(false)}
           style={{
@@ -257,8 +234,21 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
                 color: '#111827',
               }}
             >
-              『{b.title}』推薦文
+              『{b.title}』
             </h3>
+
+            {obi && (
+              <p
+                style={{
+                  fontSize: 13,
+                  color: '#6b7280',
+                  marginBottom: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {obi}
+              </p>
+            )}
 
             <p
               style={{
@@ -269,16 +259,10 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
                 marginBottom: 16,
               }}
             >
-              {userBook.comment}
+              {note}
             </p>
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 8,
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -297,7 +281,7 @@ export default function BookCard({ userBook, affiliateTag, theme }: Props) {
               <Link
                 href={amazonUrl}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer sponsored"
                 style={{
                   padding: '8px 14px',
                   borderRadius: 999,

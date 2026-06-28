@@ -3,6 +3,10 @@ import Image from 'next/image';
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
 
+// フィードは新着で呼吸する面なので、ビルド時に凍結せず毎リクエストで描画する
+// （＝ビルドが DB 到達に依存しなくなる副次効果もある）
+export const dynamic = 'force-dynamic';
+
 // 書店一覧を取得（新着順、公開されている本がある書店のみ）
 async function getRecentBookstores() {
   return await prisma.bookstore.findMany({

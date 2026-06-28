@@ -28,6 +28,7 @@ model User {
   updatedAt      DateTime   @updatedAt
 
   amazonAssociateTag String?                    // 全書店共通の Amazon アソシエイトタグ（例: "sasakiyashoten-22"）
+  rakutenAffiliateId String?                    // 楽天アフィリエイトID（pro の自分タグ。free は運営タグ）
   isPro              Boolean @default(false)   // 有料プランフラグ（Stripe 連携などで切り替え想定）
 
   bookstores     Bookstore[]
@@ -42,6 +43,7 @@ model Book {
   title        String
   author       String?                          // メーカー名などを入れてもOK
   imageUrl     String?
+  rakutenUrl   String?                          // 楽天ブックスの商品URL（API由来。アフィ wrap の元）
 
   // 本 / フィギュア / グッズ…を将来的に区別するためのカテゴリ
   category     CatalogCategory  @default(BOOK)
@@ -79,7 +81,8 @@ model UserBook {
   bookstoreId String
   bookId      String
   sortOrder   Int                      // 本棚内の並び順（1,2,3,...）
-  comment     String?                  // 店長の紹介文
+  obi         String?                  // 帯：1行（一覧/OGP/ピンで見える面。コア）
+  note        String?  @db.Text        // ノート：長文・任意（棚を開いた人だけが読む熱量）
   isPublic    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

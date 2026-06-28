@@ -39,13 +39,15 @@ export async function PATCH(req: Request, ctx: RouteContext) {
       title,
       author,
       imageUrl, // ← 商品画像 URL として使う
-      comment,
+      obi,
+      note,
       isPublic,
     } = body as {
       title?: string;
       author?: string;
       imageUrl?: string | null;
-      comment?: string | null;
+      obi?: string | null;
+      note?: string | null;
       isPublic?: boolean;
     };
 
@@ -97,16 +99,21 @@ export async function PATCH(req: Request, ctx: RouteContext) {
       });
     }
 
-    // 4. UserBook 側のコメント・公開フラグを更新
+    // 4. UserBook 側の obi / note・公開フラグを更新
     const userBookData: {
-      comment?: string | null;
+      obi?: string | null;
+      note?: string | null;
       isPublic?: boolean;
     } = {};
-    if (typeof comment === 'string') {
-      const trimmed = comment.trim();
-      userBookData.comment = trimmed || null;
-    } else if (comment === null) {
-      userBookData.comment = null;
+    if (typeof obi === 'string') {
+      userBookData.obi = obi.trim() || null;
+    } else if (obi === null) {
+      userBookData.obi = null;
+    }
+    if (typeof note === 'string') {
+      userBookData.note = note.trim() || null;
+    } else if (note === null) {
+      userBookData.note = null;
     }
     if (typeof isPublic === 'boolean') userBookData.isPublic = isPublic;
 

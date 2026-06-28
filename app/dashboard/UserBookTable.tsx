@@ -14,7 +14,7 @@ import {
 type UserBookItem = {
   id: string;
   sortOrder: number;
-  comment: string | null;
+  obi: string | null;
   isPublic: boolean;
   book: {
     id: string;
@@ -28,7 +28,7 @@ type Props = {
   bookstoreId: string;
 };
 
-function commentExcerpt(text: string | null | undefined, max = 80): string {
+function excerpt(text: string | null | undefined, max = 80): string {
   if (!text) return '';
   if (text.length <= max) return text;
   return text.slice(0, max) + '…';
@@ -116,7 +116,7 @@ export default function UserBookTable({ userBooks: initial, bookstoreId }: Props
             <th style={{ padding: '10px 12px', width: 40 }}></th>
             <th style={{ padding: '10px 12px', minWidth: 200 }}>タイトル</th>
             <th style={{ padding: '10px 12px', width: 220 }}>ASIN</th>
-            <th style={{ padding: '10px 12px', minWidth: 200 }}>推薦文</th>
+            <th style={{ padding: '10px 12px', minWidth: 200 }}>帯</th>
             <th style={{ padding: '10px 12px', width: 100 }}>公開</th>
             <th style={{ padding: '10px 12px', width: 100 }}>操作</th>
           </tr>
@@ -134,7 +134,7 @@ export default function UserBookTable({ userBooks: initial, bookstoreId }: Props
                   const titleLabel = isTitleFallback
                     ? `${ub.book.asin}（タイトル未取得）`
                     : ub.book.title;
-                  const comment = commentExcerpt(ub.comment, 80);
+                  const obi = excerpt(ub.obi, 80);
 
                   return (
                     <Draggable
@@ -183,7 +183,7 @@ export default function UserBookTable({ userBooks: initial, bookstoreId }: Props
                               maxWidth: 500,
                             }}
                           >
-                            {comment}
+                            {obi}
                           </td>
                           <td style={{ padding: '8px 12px' }}>
                             <span

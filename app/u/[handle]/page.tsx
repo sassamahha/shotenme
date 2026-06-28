@@ -2,6 +2,8 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { siteOrigin } from '@/lib/site';
+import { getAmazonLink } from '@/lib/amazon';
+import { getRakutenLink } from '@/lib/rakuten';
 import { Share2 } from 'lucide-react';
 import BookCard from './BookCard';
 import type { ReactNode } from 'react';
@@ -11,6 +13,9 @@ type PageProps = {
   // Next 16: params は Promise で渡ってくる
   params: Promise<{ handle: string }>;
 };
+
+// 棚は界隈の体温で呼吸する feed。ビルド時凍結せず毎リクエスト描画。
+export const dynamic = 'force-dynamic';
 
 // 動的OGP生成
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -117,7 +122,9 @@ export default async function UserStorePage({ params }: PageProps) {
     include: {
       owner: {
         select: {
+          isPro: true,
           amazonAssociateTag: true,
+          rakutenAffiliateId: true,
         },
       },
       books: {
@@ -139,9 +146,32 @@ export default async function UserStorePage({ params }: PageProps) {
   const title = bookstore.bookstoreTitle || `@${bookstore.handle} の本屋`;
   const bg = resolveBackground(bookstore.theme);
 
-  // ★ アフィリエイトタグを決定（ownerのamazonAssociateTagが設定されていれば優先、それ以外は共通タグ）
-  // 全書店共通のアフィリエイトタグ
-  const affiliateTag = bookstore.owner.amazonAssociateTag || 'shotenme-22';
+  const owner = bookstore.owner;
+
+  // 構造化データ（ItemList of Book）。note を持つ棚は description が厚くなる＝薄リスト判定回避。
+  const ldJson = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: title,
+    url: `${siteOrigin}/@${bookstore.handle}`,
+    numberOfItems: bookstore.books.length,
+    itemListElement: bookstore.books.map((ub, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: {
+        '@type': 'Book',
+        name: ub.book.title,
+        ...(ub.book.author
+          ? { author: { '@type': 'Person', name: ub.book.author } }
+          : {}),
+        ...(ub.book.isbn13 || ub.book.isbn10
+          ? { isbn: ub.book.isbn13 ?? ub.book.isbn10 }
+          : {}),
+        ...(ub.book.imageUrl ? { image: ub.book.imageUrl } : {}),
+        ...(ub.note || ub.obi ? { description: ub.note ?? ub.obi } : {}),
+      },
+    })),
+  };
 
   return (
     <main
@@ -150,6 +180,10 @@ export default async function UserStorePage({ params }: PageProps) {
         background: bg,
       }}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ldJson) }}
+      />
       <div
         style={{
           maxWidth: 1200,
@@ -195,14 +229,20 @@ export default async function UserStorePage({ params }: PageProps) {
           </p>
         ) : (
           <section className="book-grid">
-            {bookstore.books.map((ub) => (
-              <BookCard
-                key={ub.id}
-                userBook={ub}
-                affiliateTag={affiliateTag}
-                theme={bookstore.theme}
-              />
-            ))}
+            {bookstore.books.map((ub) => {
+              const b = ub.book;
+              const amazonUrl = getAmazonLink(b.isbn10 ?? b.asin, owner);
+              const rakutenUrl = getRakutenLink(b.rakutenUrl, owner);
+              return (
+                <BookCard
+                  key={ub.id}
+                  userBook={ub}
+                  amazonUrl={amazonUrl}
+                  rakutenUrl={rakutenUrl}
+                  theme={bookstore.theme}
+                />
+              );
+            })}
           </section>
         )}
 

@@ -5,14 +5,10 @@ CREATE TYPE "CatalogCategory" AS ENUM ('BOOK', 'COMIC', 'LIGHTNOVEL', 'MAGAZINE'
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "clerkId" TEXT NOT NULL,
-    "handle" TEXT,
-    "displayName" TEXT,
-    "bookstoreTitle" TEXT,
-    "theme" TEXT NOT NULL DEFAULT 'default',
-    "bio" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "amazonAssociateTag" TEXT,
+    "rakutenAffiliateId" TEXT,
     "isPro" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
@@ -27,6 +23,7 @@ CREATE TABLE "Book" (
     "title" TEXT NOT NULL,
     "author" TEXT,
     "imageUrl" TEXT,
+    "rakutenUrl" TEXT,
     "category" "CatalogCategory" NOT NULL DEFAULT 'BOOK',
     "languageCode" TEXT DEFAULT 'ja',
     "level" TEXT,
@@ -37,12 +34,28 @@ CREATE TABLE "Book" (
 );
 
 -- CreateTable
+CREATE TABLE "Bookstore" (
+    "id" TEXT NOT NULL,
+    "ownerId" TEXT NOT NULL,
+    "handle" TEXT,
+    "bookstoreTitle" TEXT,
+    "displayName" TEXT,
+    "theme" TEXT NOT NULL DEFAULT 'default',
+    "bio" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Bookstore_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "UserBook" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "bookstoreId" TEXT NOT NULL,
     "bookId" TEXT NOT NULL,
     "sortOrder" INTEGER NOT NULL,
-    "comment" TEXT,
+    "obi" TEXT,
+    "note" TEXT,
     "isPublic" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -68,28 +81,35 @@ CREATE TABLE "UserBookLink" (
 CREATE UNIQUE INDEX "User_clerkId_key" ON "User"("clerkId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_handle_key" ON "User"("handle");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Book_asin_key" ON "Book"("asin");
 
 -- CreateIndex
-CREATE INDEX "UserBook_userId_idx" ON "UserBook"("userId");
+CREATE UNIQUE INDEX "Bookstore_handle_key" ON "Bookstore"("handle");
+
+-- CreateIndex
+CREATE INDEX "Bookstore_ownerId_idx" ON "Bookstore"("ownerId");
+
+-- CreateIndex
+CREATE INDEX "UserBook_bookstoreId_idx" ON "UserBook"("bookstoreId");
 
 -- CreateIndex
 CREATE INDEX "UserBook_bookId_idx" ON "UserBook"("bookId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "UserBook_userId_bookId_key" ON "UserBook"("userId", "bookId");
+CREATE UNIQUE INDEX "UserBook_bookstoreId_bookId_key" ON "UserBook"("bookstoreId", "bookId");
 
 -- CreateIndex
 CREATE INDEX "UserBookLink_userBookId_idx" ON "UserBookLink"("userBookId");
 
 -- AddForeignKey
-ALTER TABLE "UserBook" ADD CONSTRAINT "UserBook_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Bookstore" ADD CONSTRAINT "Bookstore_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UserBook" ADD CONSTRAINT "UserBook_bookstoreId_fkey" FOREIGN KEY ("bookstoreId") REFERENCES "Bookstore"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserBook" ADD CONSTRAINT "UserBook_bookId_fkey" FOREIGN KEY ("bookId") REFERENCES "Book"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserBookLink" ADD CONSTRAINT "UserBookLink_userBookId_fkey" FOREIGN KEY ("userBookId") REFERENCES "UserBook"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

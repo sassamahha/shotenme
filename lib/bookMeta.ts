@@ -1,8 +1,11 @@
 // lib/bookMeta.ts
+import { fetchRakutenBookByIsbn } from './rakuten';
+
 export type BookMeta = {
   title: string | null;
   author: string | null;
   imageUrl: string | null;
+  rakutenUrl?: string | null; // 楽天由来のときだけ埋まる
 };
 
 /**
@@ -64,7 +67,24 @@ export function isbn13To10(isbn13: string): string | null {
 }
 
 /**
- * ISBN からタイトル・著者・カバー画像を（OpenBD → Google Books の順に）取得
+ * ISBN-10 → ISBN-13 変換（978 プレフィックスを付与）
+ */
+export function isbn10To13(isbn10: string): string | null {
+  const clean = isbn10.replace(/[^0-9Xx]/g, '').toUpperCase();
+  if (clean.length !== 10) return null;
+  const core = '978' + clean.slice(0, 9); // 12桁
+  let sum = 0;
+  for (let i = 0; i < core.length; i++) {
+    const d = Number(core[i]);
+    if (Number.isNaN(d)) return null;
+    sum += d * (i % 2 === 0 ? 1 : 3);
+  }
+  const check = (10 - (sum % 10)) % 10;
+  return core + String(check);
+}
+
+/**
+ * ISBN からタイトル・著者・カバー画像を（楽天 → OpenBD → Google Books の順に）取得
  * 取れなかった項目は null で返す
  */
 export async function fetchBookMetaByIsbn(isbnRaw: string): Promise<BookMeta> {
@@ -72,6 +92,21 @@ export async function fetchBookMetaByIsbn(isbnRaw: string): Promise<BookMeta> {
   const queryIsbn = isbn13 ?? isbn10;
   if (!queryIsbn) {
     return { title: null, author: null, imageUrl: null };
+  }
+
+  // 0. 楽天ブックス（高画質書影＋商品URL。最優先）
+  try {
+    const r = await fetchRakutenBookByIsbn(queryIsbn);
+    if (r && (r.title || r.imageUrl)) {
+      return {
+        title: r.title,
+        author: r.author,
+        imageUrl: r.imageUrl,
+        rakutenUrl: r.rakutenUrl,
+      };
+    }
+  } catch (e) {
+    console.error('Rakuten meta error', e);
   }
 
   // 1. OpenBD

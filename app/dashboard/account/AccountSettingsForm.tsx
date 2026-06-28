@@ -8,6 +8,7 @@ import { SignOutButton, UserProfile } from '@clerk/nextjs';
 type User = {
   id: string;
   amazonAssociateTag: string | null;
+  rakutenAffiliateId: string | null;
   isPro: boolean;
 };
 
@@ -17,6 +18,7 @@ type Props = {
 
 export default function AccountSettingsForm({ user }: Props) {
   const [amazonTag, setAmazonTag] = useState(user.amazonAssociateTag ?? '');
+  const [rakutenId, setRakutenId] = useState(user.rakutenAffiliateId ?? '');
 
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export default function AccountSettingsForm({ user }: Props) {
           // 無料ユーザーはサーバー側でも無視する前提だけど、
           // 念のためクライアントでも null にして送る
           amazonAssociateTag: user.isPro ? amazonTag || null : null,
+          rakutenAffiliateId: user.isPro ? rakutenId || null : null,
         }),
       });
 
@@ -137,6 +140,40 @@ export default function AccountSettingsForm({ user }: Props) {
               Proプランにアップグレードしてタグを設定する
             </button>
           )}
+        </div>
+
+        <div>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              display: 'block',
+              marginBottom: 4,
+            }}
+          >
+            楽天アフィリエイトID
+          </label>
+          <input
+            type="text"
+            value={rakutenId}
+            onChange={(e) => setRakutenId(e.target.value)}
+            placeholder="例: 0a1b2c3d.4e5f6g7h.…"
+            disabled={!user.isPro}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: 999,
+              border: '1px solid #d1d5db',
+              fontSize: 14,
+              background: user.isPro ? '#fff' : '#f3f4f6',
+              color: user.isPro ? '#111827' : '#9ca3af',
+            }}
+          />
+          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+            {user.isPro
+              ? '登録したIDで楽天リンクがアフィリエイト化されます。'
+              : '無料プランでは設定できません（リンクは運営タグ経由）。'}
+          </p>
         </div>
 
         {error && (

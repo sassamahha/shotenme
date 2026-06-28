@@ -12,7 +12,8 @@ type EditBookFormProps = {
     author: string;
     asin: string;
     imageUrl: string | null;
-    comment: string | null;
+    obi: string | null;
+    note: string | null;
     isPublic: boolean;
   };
 };
@@ -23,7 +24,8 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
   const [title, setTitle] = useState(initial.title ?? '');
   const [author, setAuthor] = useState(initial.author ?? '');
   const [imageUrl, setImageUrl] = useState(initial.imageUrl ?? '');
-  const [comment, setComment] = useState(initial.comment ?? '');
+  const [obi, setObi] = useState(initial.obi ?? '');
+  const [note, setNote] = useState(initial.note ?? '');
   const [isPublic, setIsPublic] = useState(initial.isPublic);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -43,7 +45,8 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
           title: title.trim(),
           author: author.trim(),
           imageUrl: imageUrl.trim(),
-          comment: comment.trim(),
+          obi: obi.trim(),
+          note: note.trim(),
           isPublic,
         }),
       });
@@ -194,19 +197,43 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
         </p>
       </div>
 
-      {/* 推薦文 */}
+      {/* 帯（obi）: 1行 */}
       <div>
         <label
-          htmlFor="comment"
+          htmlFor="obi"
           style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 6 }}
         >
-          推薦文：１行目が帯になります。
+          帯（1行）：一覧・シェアで見える面
+        </label>
+        <input
+          id="obi"
+          type="text"
+          value={obi}
+          onChange={(e) => setObi(e.target.value)}
+          placeholder="この本のひとこと"
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: '1px solid #d1d5db',
+            fontSize: 14,
+          }}
+        />
+      </div>
+
+      {/* ノート（note）: 長文・任意 */}
+      <div>
+        <label
+          htmlFor="note"
+          style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 6 }}
+        >
+          ノート（任意・長文）：棚を開いた人だけが読む熱量
         </label>
         <textarea
-          id="comment"
+          id="note"
           rows={6}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
           style={{
             width: '100%',
             padding: '10px 12px',

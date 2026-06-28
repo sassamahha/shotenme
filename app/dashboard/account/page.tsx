@@ -17,6 +17,7 @@ export default async function AccountPage() {
     select: {
       id: true,
       amazonAssociateTag: true,
+      rakutenAffiliateId: true,
       isPro: true,
     },
   });

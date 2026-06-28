@@ -6,8 +6,9 @@ import { getCurrentUser } from '@/lib/currentUser';
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
-    const { amazonAssociateTag } = body as {
+    const { amazonAssociateTag, rakutenAffiliateId } = body as {
       amazonAssociateTag?: string | null;
+      rakutenAffiliateId?: string | null;
     };
 
     // 現在のユーザーを取得
@@ -21,18 +22,27 @@ export async function PATCH(req: Request) {
     }
 
     // アフィタグは Pro ユーザーだけ反映。それ以外は null 固定。
-    let affiliateTagForUpdate: string | null | undefined;
+    let amazonForUpdate: string | null | undefined;
     if (typeof amazonAssociateTag !== 'undefined') {
-      affiliateTagForUpdate = currentUser.isPro
+      amazonForUpdate = currentUser.isPro
         ? (amazonAssociateTag?.trim() || null)
+        : null;
+    }
+    let rakutenForUpdate: string | null | undefined;
+    if (typeof rakutenAffiliateId !== 'undefined') {
+      rakutenForUpdate = currentUser.isPro
+        ? (rakutenAffiliateId?.trim() || null)
         : null;
     }
 
     const updated = await prisma.user.update({
       where: { id: currentUser.id },
       data: {
-        ...(typeof affiliateTagForUpdate !== 'undefined'
-          ? { amazonAssociateTag: affiliateTagForUpdate }
+        ...(typeof amazonForUpdate !== 'undefined'
+          ? { amazonAssociateTag: amazonForUpdate }
+          : {}),
+        ...(typeof rakutenForUpdate !== 'undefined'
+          ? { rakutenAffiliateId: rakutenForUpdate }
           : {}),
       },
     });

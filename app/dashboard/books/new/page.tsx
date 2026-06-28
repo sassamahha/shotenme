@@ -1,372 +1,403 @@
 // app/dashboard/books/new/page.tsx
+// 共有リンク投入UX：貼る/検索 → 自動実体化 → 棚を選ぶ → obi 1行（任意で note）→ 追加。
+// 生成UI（タイトル/著者/画像の手入力フォーム）は廃止。
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-type Mode = 'isbn' | 'asin' | 'url';
+type ResolvedBook = {
+  canonicalKey: string;
+  asin: string | null;
+  isbn10: string | null;
+  isbn13: string | null;
+  title: string;
+  author: string;
+  imageUrl: string | null;
+  rakutenUrl: string | null;
+};
 
-export default function NewBookPage() {
+type Bookstore = {
+  id: string;
+  handle: string | null;
+  bookstoreTitle: string | null;
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '10px 12px',
+  borderRadius: 8,
+  border: '1px solid #d1d5db',
+  fontSize: 14,
+};
+
+function NewBookInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const bookstoreId = searchParams.get('bookstore');
-  const [mode, setMode] = useState<Mode>('isbn');
-  const [isbn, setIsbn] = useState('');
-  const [asin, setAsin] = useState('');
-  const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [comment, setComment] = useState('');
+
+  // 棚（bookstore）。share-target からは未指定で来ることがある。
+  const [bookstoreId, setBookstoreId] = useState<string>(
+    searchParams.get('bookstore') ?? '',
+  );
+  const [bookstores, setBookstores] = useState<Bookstore[]>([]);
+
+  // share-target / 手貼り双方の初期入力
+  const prefill =
+    searchParams.get('url') ||
+    searchParams.get('text') ||
+    searchParams.get('title') ||
+    '';
+
+  const [input, setInput] = useState(prefill);
+  const [resolving, setResolving] = useState(false);
+  const [candidates, setCandidates] = useState<ResolvedBook[]>([]);
+  const [selected, setSelected] = useState<ResolvedBook | null>(null);
+
+  const [obi, setObi] = useState('');
+  const [note, setNote] = useState('');
+  const [showNote, setShowNote] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submitting) return;
+  // 棚一覧を取得（未選択なら先頭を既定に）
+  useEffect(() => {
+    fetch('/api/bookstores')
+      .then((r) => r.json())
+      .then((d) => {
+        const list: Bookstore[] = d.bookstores ?? [];
+        setBookstores(list);
+        if (!bookstoreId && list.length > 0) setBookstoreId(list[0].id);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  const resolve = useCallback(async (value: string) => {
+    const q = value.trim();
+    if (!q) return;
+    setResolving(true);
+    setError(null);
+    setCandidates([]);
+    setSelected(null);
+
+    try {
+      const res = await fetch('/api/ingest/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: q }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.message || '解決に失敗しました。');
+        return;
+      }
+      const list: ResolvedBook[] = data.candidates ?? [];
+      if (list.length === 0) {
+        setError(
+          'この本を見つけられませんでした。リンク（Amazon/楽天）かタイトルで試してください。',
+        );
+        return;
+      }
+      setCandidates(list);
+      if (list.length === 1) setSelected(list[0]); // URL/ISBN は即確定
+    } catch {
+      setError('解決に失敗しました。時間をおいて再度お試しください。');
+    } finally {
+      setResolving(false);
+    }
+  }, []);
+
+  // share-target 等で初期入力がある時は自動で解決
+  useEffect(() => {
+    if (prefill.trim()) resolve(prefill);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleAdd() {
+    if (!selected) return;
     if (!bookstoreId) {
-      setError('書店が選択されていません。');
+      setError('棚を選択してください。');
       return;
     }
-
     setSubmitting(true);
     setError(null);
-
-    const res = await fetch('/api/books', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bookstoreId,
-        mode,
-        isbn: mode === 'isbn' ? isbn : undefined,
-        asin: mode === 'asin' ? asin : undefined,
-        url: mode === 'url' ? url : undefined,
-        title: mode === 'isbn' ? undefined : title || undefined,
-        author: mode === 'isbn' ? undefined : author || undefined,
-        imageUrl: imageUrl || undefined,
-        comment: comment || undefined,
-      }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(
-        data?.message ||
-          '登録に失敗しました。時間をおいて再度お試しください。',
-      );
+    try {
+      const res = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookstoreId,
+          book: selected,
+          obi: obi || undefined,
+          note: note || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.message || '追加に失敗しました。');
+        return;
+      }
+      router.push(`/dashboard?bookstore=${bookstoreId}`);
+      router.refresh();
+    } catch {
+      setError('追加に失敗しました。');
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    // 成功
-    router.push(`/dashboard?bookstore=${bookstoreId}`);
-    router.refresh();
-  };
+  }
 
   return (
-    <main style={{ padding: '32px 24px', maxWidth: 720, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
-        本を追加する
+    <main style={{ padding: '32px 24px', maxWidth: 640, margin: '0 auto' }}>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6 }}>
+        棚に本を放り込む
       </h1>
+      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
+        Amazon / 楽天の共有リンクを貼るか、タイトルで検索 → 書影が自動で出ます。
+      </p>
 
-      {/* モード切り替え */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          marginBottom: 24,
-          fontSize: 14,
-        }}
-      >
+      {/* 棚（bookstore）選択 */}
+      {bookstores.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <label
+            style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+          >
+            どの棚に入れる？
+          </label>
+          <select
+            value={bookstoreId}
+            onChange={(e) => setBookstoreId(e.target.value)}
+            style={inputStyle}
+          >
+            {bookstores.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.bookstoreTitle || `@${b.handle ?? b.id.slice(0, 6)}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* 貼る / 検索ボックス */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') resolve(input);
+          }}
+          placeholder="リンクを貼る or タイトルを打つ"
+          style={inputStyle}
+        />
         <button
           type="button"
-          onClick={() => setMode('isbn')}
+          onClick={() => resolve(input)}
+          disabled={resolving}
           style={{
-            padding: '6px 12px',
-            borderRadius: 999,
-            border: '1px solid #d1d5db',
-            background: mode === 'isbn' ? '#111827' : '#fff',
-            color: mode === 'isbn' ? '#fff' : '#111827',
-            cursor: 'pointer',
+            padding: '10px 18px',
+            borderRadius: 8,
+            border: 'none',
+            background: resolving ? '#9ca3af' : '#111827',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 14,
+            cursor: resolving ? 'default' : 'pointer',
+            whiteSpace: 'nowrap',
           }}
         >
-          ISBN で登録
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('asin')}
-          style={{
-            padding: '6px 12px',
-            borderRadius: 999,
-            border: '1px solid #d1d5db',
-            background: mode === 'asin' ? '#111827' : '#fff',
-            color: mode === 'asin' ? '#fff' : '#111827',
-            cursor: 'pointer',
-          }}
-        >
-          ASIN で登録
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('url')}
-          style={{
-            padding: '6px 12px',
-            borderRadius: 999,
-            border: '1px solid #d1d5db',
-            background: mode === 'url' ? '#111827' : '#fff',
-            color: mode === 'url' ? '#fff' : '#111827',
-            cursor: 'pointer',
-          }}
-        >
-          Amazon の URL で登録
+          {resolving ? '解決中…' : '探す'}
         </button>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-          fontSize: 14,
-        }}
-      >
-        {mode === 'isbn' && (
-          <>
-            <div>
-              <label
-                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
-              >
-                ISBN
-              </label>
-              <input
-                type="text"
-                value={isbn}
-                onChange={(e) => setIsbn(e.target.value)}
-                placeholder="例: 9784575248524"
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                }}
-                required
-              />
-              <p style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                ISBN からタイトル・著者・カバー画像を自動取得します。
-              </p>
-            </div>
-          </>
-        )}
+      {error && (
+        <p style={{ color: '#b91c1c', fontSize: 13, marginBottom: 12 }}>{error}</p>
+      )}
 
-        {mode === 'asin' && (
-          <>
-            <div>
-              <label
-                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
-              >
-                ASIN
-              </label>
-              <input
-                type="text"
-                value={asin}
-                onChange={(e) => setAsin(e.target.value)}
-                placeholder="例: 4065286182"
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                }}
-                required
-              />
-            </div>
+      {/* 候補（タイトル検索で複数のとき） */}
+      {candidates.length > 1 && !selected && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+          {candidates.map((c) => (
+            <button
+              key={c.canonicalKey}
+              type="button"
+              onClick={() => setSelected(c)}
+              style={{
+                display: 'flex',
+                gap: 12,
+                alignItems: 'center',
+                padding: 8,
+                borderRadius: 8,
+                border: '1px solid #e5e7eb',
+                background: '#fff',
+                textAlign: 'left',
+                cursor: 'pointer',
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {c.imageUrl && (
+                <img
+                  src={c.imageUrl}
+                  alt={c.title}
+                  style={{ width: 40, height: 56, objectFit: 'cover' }}
+                />
+              )}
+              <span>
+                <span style={{ fontSize: 14, fontWeight: 600, display: 'block' }}>
+                  {c.title}
+                </span>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>{c.author}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
-            <div>
-              <label
-                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
-              >
-                タイトル
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
-              >
-                著者名
-              </label>
-              <input
-                type="text"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                }}
-              />
-            </div>
-          </>
-        )}
-
-        {mode === 'url' && (
-          <>
-            <div>
-              <label
-                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
-              >
-                Amazon 商品ページの URL
-              </label>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://www.amazon.co.jp/dp/XXXXXXXXXX"
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                }}
-                required
-              />
-              <p style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                URL から ASIN を自動抽出して登録します。
-              </p>
-            </div>
-
-            <div>
-              <label
-                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
-              >
-                タイトル
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
-              >
-                著者名
-              </label>
-              <input
-                type="text"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 8,
-                  border: '1px solid #d1d5db',
-                }}
-              />
-            </div>
-          </>
-        )}
-
-        {/* 共通：カバー画像URL & コメント */}
-        <div>
-          <label
-            style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
+      {/* 確定した本のプレビュー + obi/note */}
+      {selected && (
+        <div style={{ marginTop: 16 }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 14,
+              padding: 12,
+              borderRadius: 10,
+              border: '1px solid #e5e7eb',
+              background: '#fff',
+              marginBottom: 16,
+            }}
           >
-            カバー画像 URL（任意）
-          </label>
-          <input
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://..."
-            style={{
-              width: '100%',
-              padding: '8px 10px',
-              borderRadius: 8,
-              border: '1px solid #d1d5db',
-            }}
-          />
-        </div>
-
-            <div>
-              <label
-                style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {selected.imageUrl ? (
+              <img
+                src={selected.imageUrl}
+                alt={selected.title}
+                style={{ width: 64, height: 90, objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 64,
+                  height: 90,
+                  background: '#e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 10,
+                  color: '#9ca3af',
+                  textAlign: 'center',
+                }}
               >
-                推薦文：１行目が帯になります。
+                表紙なし
+              </div>
+            )}
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
+                {selected.title}
+              </p>
+              <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>
+                {selected.author}
+              </p>
+              {candidates.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  style={{
+                    marginTop: 8,
+                    fontSize: 12,
+                    color: '#2563eb',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                >
+                  別の候補を選ぶ
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* obi（1行・任意） */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+              帯（1行・任意）
+            </label>
+            <input
+              type="text"
+              value={obi}
+              onChange={(e) => setObi(e.target.value)}
+              placeholder="この本のひとこと（一覧やシェアで見える面）"
+              style={inputStyle}
+            />
+          </div>
+
+          {/* note（段階的開示） */}
+          {!showNote ? (
+            <button
+              type="button"
+              onClick={() => setShowNote(true)}
+              style={{
+                fontSize: 13,
+                color: '#2563eb',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                marginBottom: 16,
+              }}
+            >
+              ＋ もっと書く（ノート）
+            </button>
+          ) : (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+                ノート（任意・長文）
               </label>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '8px 10px',
-              borderRadius: 8,
-              border: '1px solid #d1d5db',
-              resize: 'vertical',
-            }}
-          />
-        </div>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={5}
+                placeholder="棚を開いた人だけが読む熱量。語りたい時だけ。"
+                style={{ ...inputStyle, resize: 'vertical' }}
+              />
+            </div>
+          )}
 
-        {error && (
-          <p style={{ color: '#b91c1c', fontSize: 13 }}>{error}</p>
-        )}
-
-        <div style={{ marginTop: 8 }}>
           <button
-            type="submit"
+            type="button"
+            onClick={handleAdd}
             disabled={submitting}
             style={{
-              padding: '10px 20px',
+              padding: '10px 24px',
               borderRadius: 999,
               border: 'none',
               background: submitting ? '#6b7280' : '#10b981',
               color: '#022c22',
-              fontWeight: 600,
+              fontWeight: 700,
+              fontSize: 14,
               cursor: submitting ? 'default' : 'pointer',
             }}
           >
-            {submitting ? '登録中…' : '登録する'}
+            {submitting ? '追加中…' : '棚に追加'}
           </button>
-
-          <Link
-            href="/dashboard"
-            style={{
-              margin: '8px 16px',
-              padding: '10px 20px',
-              borderRadius: 999,
-              border: '1px solid #d1d5db',
-              textDecoration: 'none',
-              fontSize: 14,
-            }}
-          >
-            戻る
-          </Link>
         </div>
-      </form>
+      )}
+
+      <div style={{ marginTop: 32 }}>
+        <Link href="/dashboard" style={{ fontSize: 13, color: '#6b7280' }}>
+          ← ダッシュボードに戻る
+        </Link>
+      </div>
     </main>
+  );
+}
+
+export default function NewBookPage() {
+  return (
+    <Suspense fallback={<main style={{ padding: 32 }}>読み込み中…</main>}>
+      <NewBookInner />
+    </Suspense>
   );
 }
