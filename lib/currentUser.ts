@@ -13,19 +13,13 @@ export async function getCurrentUser() {
     return null;
   }
 
-  // clerkIdでユーザーを検索
-  let user = await prisma.user.findUnique({
+  // 初回ログイン時に複数の Server Component が並行で呼んでも衝突しないよう upsert で冪等化
+  // （find→create だと競合して P2002: clerkId unique violation が起きる）
+  const user = await prisma.user.upsert({
     where: { clerkId },
+    update: {},
+    create: { clerkId },
   });
-
-  // ユーザーが存在しない場合は作成
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        clerkId,
-      },
-    });
-  }
 
   return user;
 }
