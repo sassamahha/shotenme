@@ -1,13 +1,14 @@
 // app/api/ingest/resolve/route.ts
 // 貼られた1本の入力 → 本カード候補に解決（プレビュー用。DBには書かない）。
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/currentUser';
+import { auth } from '@clerk/nextjs/server';
 import { resolveInput } from '@/lib/ingest';
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    // 解決はログイン確認だけでよい（DBは触らない＝接続を消費しない）
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ message: '認証が必要です。' }, { status: 401 });
     }
 
