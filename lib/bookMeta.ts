@@ -173,6 +173,64 @@ export async function fetchBookMetaByAsin(asin: string): Promise<BookMeta> {
   return { title: null, author: null, imageUrl: null };
 }
 
+export type KeywordHit = {
+  isbn13: string | null;
+  isbn10: string | null;
+  title: string | null;
+  author: string | null;
+  imageUrl: string | null;
+};
+
+/**
+ * Google Books のキーワード検索（楽天が使えない/空のときのフォールバック）。
+ * タイトル文字列から候補配列を返す。ISBN は industryIdentifiers から拾う。
+ */
+export async function searchGoogleBooksByKeyword(
+  q: string,
+): Promise<KeywordHit[]> {
+  const query = q.trim();
+  if (!query) return [];
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+        query,
+      )}&maxResults=10&langRestrict=ja&country=JP`,
+      { next: { revalidate: 60 * 60 * 24 } },
+    );
+    if (!res.ok) return [];
+    const json = await res.json();
+    const items = Array.isArray(json.items) ? json.items : [];
+    return items
+      .map((it: { volumeInfo?: Record<string, unknown> }): KeywordHit | null => {
+        const info = it.volumeInfo;
+        if (!info) return null;
+        const ids = Array.isArray(info.industryIdentifiers)
+          ? (info.industryIdentifiers as { type: string; identifier: string }[])
+          : [];
+        const isbn13 = ids.find((x) => x.type === 'ISBN_13')?.identifier ?? null;
+        const isbn10 = ids.find((x) => x.type === 'ISBN_10')?.identifier ?? null;
+        const imageLinks = info.imageLinks as
+          | { thumbnail?: string; smallThumbnail?: string }
+          | undefined;
+        const rawImage = imageLinks?.thumbnail || imageLinks?.smallThumbnail || null;
+        return {
+          isbn13,
+          isbn10,
+          title: (info.title as string) ?? null,
+          author: Array.isArray(info.authors)
+            ? ((info.authors as string[])[0] ?? null)
+            : null,
+          // http で来ることがあるので https に寄せる
+          imageUrl: rawImage ? rawImage.replace(/^http:/, 'https:') : null,
+        };
+      })
+      .filter((h: KeywordHit | null): h is KeywordHit => !!h && !!h.title);
+  } catch (e) {
+    console.error('Google Books keyword error', e);
+    return [];
+  }
+}
+
 /**
  * Amazon URL から ASIN を抽出してメタデータを取得
  */

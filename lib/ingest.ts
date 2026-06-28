@@ -7,6 +7,7 @@ import {
   isbn13To10,
   asinToIsbn,
   fetchBookMetaByIsbn,
+  searchGoogleBooksByKeyword,
   parseAsinFromAmazonUrl,
 } from './bookMeta';
 import { searchRakutenBooksByKeyword } from './rakuten';
@@ -131,10 +132,10 @@ export async function resolveInput(inputRaw: string): Promise<ResolveResult> {
     if (book) return { kind: 'single', candidates: [book] };
   }
 
-  // タイトル等のキーワード → 楽天検索で候補列
-  const hits = await searchRakutenBooksByKeyword(input);
-  const candidates: ResolvedBook[] = hits
-    .filter((h) => h.isbn13 || h.title)
+  // タイトル等のキーワード → まず楽天、空なら Google Books（楽天キー無しでも探せる）
+  const rkHits = await searchRakutenBooksByKeyword(input);
+  let candidates: ResolvedBook[] = rkHits
+    .filter((h) => h.isbn13)
     .map((h) => {
       const keys = buildKeys({ isbn13: h.isbn13 });
       return {
@@ -145,5 +146,22 @@ export async function resolveInput(inputRaw: string): Promise<ResolveResult> {
         rakutenUrl: h.rakutenUrl,
       };
     });
+
+  if (candidates.length === 0) {
+    const ggHits = await searchGoogleBooksByKeyword(input);
+    candidates = ggHits
+      .filter((h) => h.isbn13 || h.isbn10)
+      .map((h) => {
+        const keys = buildKeys({ isbn13: h.isbn13, isbn10: h.isbn10 });
+        return {
+          ...keys,
+          title: h.title?.trim() || keys.canonicalKey,
+          author: h.author?.trim() || '著者情報なし',
+          imageUrl: h.imageUrl,
+          rakutenUrl: null,
+        };
+      });
+  }
+
   return { kind: candidates.length ? 'multiple' : 'none', candidates };
 }
