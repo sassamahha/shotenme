@@ -20,6 +20,19 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'cover.openbd.jp',
       },
+      // 楽天ブックスの書影
+      {
+        protocol: 'https',
+        hostname: 'thumbnail.image.rakuten.co.jp',
+      },
+      {
+        protocol: 'https',
+        hostname: 'image.rakuten.co.jp',
+      },
+      {
+        protocol: 'https',
+        hostname: 'shop.r10s.jp',
+      },
     ],
   },
 
