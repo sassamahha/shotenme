@@ -1,12 +1,19 @@
 // lib/rakuten.ts
 // 楽天ブックス書籍検索API（BooksBook/Search）。
 // 目的: 店長体験を「リンク貼るだけ / タイトル打つだけ」にする。高画質書影＋アフィリンク。
+//
+// 2026年の楽天API刷新に対応:
+//  - ドメイン app.rakuten.co.jp → openapi.rakuten.co.jp（旧は2026-05-14停止）
+//  - applicationId（UUID）に加えて accessKey（pk_始まり）が必須＝二重認証
+//  - Referer ヘッダー必須（登録アプリURLと一致させる。403対策）
 import type { AffiliateUser } from './amazon';
+import { siteOrigin } from './site';
 
 const ENDPOINT =
-  'https://app.rakuten.co.jp/services/api/BooksBook/Search/20170404';
+  'https://openapi.rakuten.co.jp/services/api/BooksBook/Search/20170404';
 
 const APP_ID = process.env.RAKUTEN_APP_ID;
+const ACCESS_KEY = process.env.RAKUTEN_ACCESS_KEY;
 const DEFAULT_AFFILIATE_ID = process.env.RAKUTEN_AFFILIATE_ID;
 
 export type RakutenBook = {
@@ -47,18 +54,21 @@ function toRakutenBook(item: RakutenApiItem['Item']): RakutenBook {
 async function callApi(
   params: Record<string, string>,
 ): Promise<RakutenApiItem[]> {
-  if (!APP_ID) {
+  if (!APP_ID || !ACCESS_KEY) {
     // 未設定なら静かにスキップ（openBD / Google Books へフォールバックさせる）
     return [];
   }
   const qs = new URLSearchParams({
     applicationId: APP_ID,
+    accessKey: ACCESS_KEY,
     formatVersion: '2',
     hits: '10',
     ...params,
   });
   try {
     const res = await fetch(`${ENDPOINT}?${qs.toString()}`, {
+      // 新APIは Referer 必須（登録アプリURLと一致させる）
+      headers: { Referer: siteOrigin },
       next: { revalidate: 60 * 60 * 24 }, // 1日キャッシュ
     });
     if (!res.ok) return [];
