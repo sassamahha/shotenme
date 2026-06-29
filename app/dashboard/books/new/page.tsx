@@ -36,11 +36,18 @@ function NewBookInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 棚（bookstore）。share-target からは未指定で来ることがある。
-  const [bookstoreId, setBookstoreId] = useState<string>(
-    searchParams.get('bookstore') ?? '',
-  );
+  // 棚（bookstore）。複数選択可（再生リスト感覚で一気に入れる）。
+  // share-target からは未指定で来ることがある。
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+    const q = searchParams.get('bookstore');
+    return q ? [q] : [];
+  });
   const [bookstores, setBookstores] = useState<Bookstore[]>([]);
+
+  const toggleShelf = (id: string) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
 
   // share-target / 手貼り双方の初期入力
   const prefill =
@@ -68,7 +75,9 @@ function NewBookInner() {
       .then((d) => {
         const list: Bookstore[] = d.bookstores ?? [];
         setBookstores(list);
-        if (!bookstoreId && list.length > 0) setBookstoreId(list[0].id);
+        setSelectedIds((prev) =>
+          prev.length === 0 && list.length > 0 ? [list[0].id] : prev,
+        );
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,8 +126,8 @@ function NewBookInner() {
 
   async function handleAdd() {
     if (!selected) return;
-    if (!bookstoreId) {
-      setError('棚を選択してください。');
+    if (selectedIds.length === 0) {
+      setError('棚を1つ以上選択してください。');
       return;
     }
     setSubmitting(true);
@@ -128,7 +137,7 @@ function NewBookInner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bookstoreId,
+          bookstoreIds: selectedIds,
           book: selected,
           obi: obi || undefined,
           note: note || undefined,
@@ -139,7 +148,7 @@ function NewBookInner() {
         setError(data?.message || '追加に失敗しました。');
         return;
       }
-      router.push(`/dashboard?bookstore=${bookstoreId}`);
+      router.push(`/dashboard?bookstore=${selectedIds[0]}`);
       router.refresh();
     } catch {
       setError('追加に失敗しました。');
@@ -157,25 +166,40 @@ function NewBookInner() {
         タイトルで検索 → 書影が自動で出ます。
       </p>
 
-      {/* 棚（bookstore）選択 */}
+      {/* 棚（bookstore）選択：複数チェック可 */}
       {bookstores.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <label
-            style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+            style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}
           >
-            どの棚に入れる？
+            どの棚に入れる？（複数選択OK）
           </label>
-          <select
-            value={bookstoreId}
-            onChange={(e) => setBookstoreId(e.target.value)}
-            style={inputStyle}
-          >
-            {bookstores.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.bookstoreTitle || `@${b.handle ?? b.id.slice(0, 6)}`}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {bookstores.map((b) => {
+              const on = selectedIds.includes(b.id);
+              const label = b.bookstoreTitle || `@${b.handle ?? b.id.slice(0, 6)}`;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => toggleShelf(b.id)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 999,
+                    border: on ? '1px solid #10b981' : '1px solid #d1d5db',
+                    background: on ? '#ecfdf5' : '#fff',
+                    color: on ? '#065f46' : '#374151',
+                    fontSize: 13,
+                    fontWeight: on ? 600 : 400,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {on ? '✓ ' : ''}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

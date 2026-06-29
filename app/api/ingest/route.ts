@@ -6,7 +6,8 @@ import { getCurrentUser } from '@/lib/currentUser';
 import type { ResolvedBook } from '@/lib/ingest';
 
 type PostBody = {
-  bookstoreId: string;
+  bookstoreId?: string; // 後方互換
+  bookstoreIds?: string[]; // 複数棚に一気に追加（再生リスト感覚）
   book: ResolvedBook;
   obi?: string | null;
   note?: string | null;
@@ -20,9 +21,16 @@ export async function POST(req: NextRequest) {
     }
 
     const body = (await req.json()) as PostBody;
-    const { bookstoreId, book } = body;
+    const { book } = body;
 
-    if (!bookstoreId) {
+    // 単一/複数どちらの指定も受ける
+    const requestedIds = body.bookstoreIds?.length
+      ? body.bookstoreIds
+      : body.bookstoreId
+        ? [body.bookstoreId]
+        : [];
+
+    if (requestedIds.length === 0) {
       return NextResponse.json(
         { message: '棚（書店）が選択されていません。' },
         { status: 400 },
@@ -35,11 +43,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 棚の存在と所有者チェック
-    const bookstore = await prisma.bookstore.findFirst({
-      where: { id: bookstoreId, ownerId: user.id },
+    // 所有している棚だけに絞る
+    const bookstores = await prisma.bookstore.findMany({
+      where: { id: { in: requestedIds }, ownerId: user.id },
+      select: { id: true },
     });
-    if (!bookstore) {
+    if (bookstores.length === 0) {
       return NextResponse.json(
         { message: '棚が見つかりません。' },
         { status: 404 },
@@ -49,7 +58,7 @@ export async function POST(req: NextRequest) {
     const obi = body.obi?.trim() || null;
     const note = body.note?.trim() || null;
 
-    // Book を canonicalKey（= Book.asin フィールドを同定キーとして流用）で upsert
+    // Book を canonicalKey（= Book.asin フィールドを同定キーとして流用）で upsert（1回）
     const bookRow = await prisma.book.upsert({
       where: { asin: book.canonicalKey },
       update: {
@@ -71,37 +80,37 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 同じ棚に同じ本があれば、その UserBook を返す（多重登録しない）
-    const existing = await prisma.userBook.findUnique({
-      where: {
-        bookstoreId_bookId: { bookstoreId: bookstore.id, bookId: bookRow.id },
-      },
-    });
-    if (existing) {
-      return NextResponse.json(
-        { userBookId: existing.id, duplicated: true },
-        { status: 200 },
-      );
+    // 各棚に配置（既にあればスキップ）。obi/note は各棚で共通。
+    let added = 0;
+    let skipped = 0;
+    for (const bs of bookstores) {
+      const existing = await prisma.userBook.findUnique({
+        where: {
+          bookstoreId_bookId: { bookstoreId: bs.id, bookId: bookRow.id },
+        },
+      });
+      if (existing) {
+        skipped++;
+        continue;
+      }
+      const agg = await prisma.userBook.aggregate({
+        where: { bookstoreId: bs.id },
+        _max: { sortOrder: true },
+      });
+      await prisma.userBook.create({
+        data: {
+          bookstoreId: bs.id,
+          bookId: bookRow.id,
+          sortOrder: (agg._max.sortOrder ?? 0) + 1,
+          obi,
+          note,
+          isPublic: true,
+        },
+      });
+      added++;
     }
 
-    const agg = await prisma.userBook.aggregate({
-      where: { bookstoreId: bookstore.id },
-      _max: { sortOrder: true },
-    });
-    const nextSortOrder = (agg._max.sortOrder ?? 0) + 1;
-
-    const userBook = await prisma.userBook.create({
-      data: {
-        bookstoreId: bookstore.id,
-        bookId: bookRow.id,
-        sortOrder: nextSortOrder,
-        obi,
-        note,
-        isPublic: true,
-      },
-    });
-
-    return NextResponse.json({ userBookId: userBook.id }, { status: 201 });
+    return NextResponse.json({ added, skipped }, { status: 201 });
   } catch (err) {
     console.error('POST /api/ingest error', err);
     const detail = err instanceof Error ? err.message : String(err);

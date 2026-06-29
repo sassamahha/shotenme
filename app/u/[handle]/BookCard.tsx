@@ -43,13 +43,6 @@ export default function BookCard({ userBook, amazonUrl, rakutenUrl, theme }: Pro
   const [open, setOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // 帯の表示は1行・はみ出しは省略
-  const obiPreview = obi
-    ? obi.length > 35
-      ? obi.slice(0, 35) + '…'
-      : obi
-    : null;
-
   return (
     <>
       <article
@@ -101,34 +94,43 @@ export default function BookCard({ userBook, amazonUrl, rakutenUrl, theme }: Pro
                 表紙画像なし
               </div>
             )}
+            {/* 帯（obi）= 本物の帯風。書影の下部に厚く被さる（紙クリーム） */}
+            {obi && (
+              <div
+                onClick={() => hasNote && setOpen(true)}
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: '33%',
+                  background: '#faf4e6',
+                  borderTop: '2px solid #d9c89a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 12px',
+                  cursor: hasNote ? 'pointer' : 'default',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#4a3c1a',
+                    textAlign: 'center',
+                    lineHeight: 1.4,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {obi}
+                </span>
+              </div>
+            )}
           </div>
-
-          {/* 帯（obi）- 書影の下部に被さる */}
-          {obiPreview && (
-            <div
-              onClick={() => hasNote && setOpen(true)}
-              style={{
-                marginTop: '-40px',
-                position: 'relative',
-                zIndex: 1,
-                width: '100%',
-                padding: '10px 14px',
-                background: 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(2px)',
-                fontSize: 12,
-                lineHeight: 1.4,
-                color: '#374151',
-                cursor: hasNote ? 'pointer' : 'default',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                boxShadow: '0 -2px 4px rgba(0, 0, 0, 0.1)',
-                borderTop: '1px solid rgba(0, 0, 0, 0.05)',
-              }}
-            >
-              {obiPreview}
-            </div>
-          )}
         </div>
 
         <div style={{ padding: '16px 18px 18px' }}>
