@@ -85,6 +85,7 @@ export default function AccountSettingsForm({ user }: Props) {
         >
           Amazon アソシエイトタグ（Pro限定）
         </h2>
+        {/* Amazon アソシエイトタグ */}
         <div>
           <label
             style={{
@@ -112,36 +113,14 @@ export default function AccountSettingsForm({ user }: Props) {
               color: user.isPro ? '#111827' : '#9ca3af',
             }}
           />
-          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
-            {user.isPro
-              ? '登録したタグで全書店の Amazon リンクが生成されます。'
-              : '現在は無料プランです。アフィリエイトタグは設定できません。'}
-          </p>
-
-          {!user.isPro && (
-            <button
-              type="button"
-              onClick={() => {
-                // Stripe のチェックアウトに飛ばす実装をあとで入れる
-                alert('Proプランの購入フローはあとで実装する想定。');
-              }}
-              style={{
-                marginTop: 8,
-                padding: '10px 18px',
-                borderRadius: 999,
-                border: 'none',
-                background: '#2563eb',
-                color: '#ffffff',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Proプランにアップグレードしてタグを設定する
-            </button>
+          {user.isPro && (
+            <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+              登録したタグで全書店の Amazon リンクが生成されます。
+            </p>
           )}
         </div>
 
+        {/* 楽天アフィリエイトID */}
         <div>
           <label
             style={{
@@ -169,12 +148,49 @@ export default function AccountSettingsForm({ user }: Props) {
               color: user.isPro ? '#111827' : '#9ca3af',
             }}
           />
-          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
-            {user.isPro
-              ? '登録したIDで楽天リンクがアフィリエイト化されます。'
-              : '無料プランでは設定できません（リンクは運営タグ経由）。'}
-          </p>
+          {user.isPro && (
+            <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+              登録したIDで楽天リンクがアフィリエイト化されます。
+            </p>
+          )}
         </div>
+
+        {/* アップグレード（β中はDM導線） */}
+        {!user.isPro && (
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                // Stripe のチェックアウトに飛ばす実装をあとで入れる
+                alert('Proプランの購入フローはあとで実装する想定。');
+              }}
+              style={{
+                padding: '10px 18px',
+                borderRadius: 999,
+                border: 'none',
+                background: '#2563eb',
+                color: '#ffffff',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Proプランにアップグレードしてタグを設定する
+            </button>
+            <p style={{ fontSize: 12, color: '#6b7280', marginTop: 8, lineHeight: 1.6 }}>
+              現在はβ稼働中です。設定したい方は{' '}
+              <a
+                href="https://instagram.com/sassamahha"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#2563eb', textDecoration: 'underline' }}
+              >
+                https://instagram.com/sassamahha
+              </a>{' '}
+              よりDMください。
+            </p>
+          </div>
+        )}
 
         {error && (
           <p style={{ color: '#dc2626', fontSize: 13 }}>{error}</p>

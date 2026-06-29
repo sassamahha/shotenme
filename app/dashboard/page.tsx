@@ -140,17 +140,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       {userBooks.length === 0 ? (
         <p style={{ color: '#6b7280' }}>まだ本が登録されていません。</p>
       ) : (
-        <>
-          <UserBookTable userBooks={userBooks} bookstoreId={bookstore.id} />
-          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 16, lineHeight: 1.6 }}>
-            <p style={{ margin: 0, marginBottom: 4 }}>
-             ・ISBNの登録で画像を取得できない場合は、画像のURLをコピペ入力します。
-            </p>
-            <p style={{ margin: 0 }}>
-             ・カテゴリページなどASIN以外のページをリンク先にする場合は、「AmazonのURLを登録」から入力します。
-            </p>
-          </div>
-        </>
+        <UserBookTable userBooks={userBooks} bookstoreId={bookstore.id} />
       )}
     </main>
   );

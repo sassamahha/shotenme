@@ -151,10 +151,10 @@ function NewBookInner() {
   return (
     <main style={{ padding: '32px 24px', maxWidth: 640, margin: '0 auto' }}>
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6 }}>
-        棚に本を放り込む
+        本を登録
       </h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
-        Amazon / 楽天の共有リンクを貼るか、タイトルで検索 → 書影が自動で出ます。
+        タイトルで検索 → 書影が自動で出ます。
       </p>
 
       {/* 棚（bookstore）選択 */}
@@ -188,7 +188,7 @@ function NewBookInner() {
           onKeyDown={(e) => {
             if (e.key === 'Enter') resolve(input);
           }}
-          placeholder="リンクを貼る or タイトルを打つ"
+          placeholder="タイトル"
           style={inputStyle}
         />
         <button

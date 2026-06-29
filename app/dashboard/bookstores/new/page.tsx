@@ -4,6 +4,7 @@
 import { useState, useTransition, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { THEMES } from '@/lib/themes';
 
 export default function NewBookstorePage() {
   const router = useRouter();
@@ -206,9 +207,11 @@ export default function NewBookstorePage() {
               background: '#fff',
             }}
           >
-            <option value="default">ライトグレー（デフォルト）</option>
-            <option value="warm">あたたかいグラデーション</option>
-            <option value="paper">紙っぽいオフホワイト</option>
+            {THEMES.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
           </select>
         </div>
 

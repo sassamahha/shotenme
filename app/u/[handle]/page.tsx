@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { siteOrigin } from '@/lib/site';
 import { getAmazonLink } from '@/lib/amazon';
 import { getRakutenLink } from '@/lib/rakuten';
+import { themeBackground } from '@/lib/themes';
 import { Share2 } from 'lucide-react';
 import BookCard from './BookCard';
 import type { ReactNode } from 'react';
@@ -65,17 +66,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: [ogImageUrl],
     },
   };
-}
-
-function resolveBackground(theme?: string | null): string {
-  switch (theme) {
-    case 'warm':
-      return 'linear-gradient(135deg,#f97316,#facc15)'; // あたたかいグラデーション
-    case 'paper':
-      return '#fdfaf3'; // 紙っぽいオフホワイト
-    default:
-      return '#f3f4f6'; // デフォルト：薄いグレー
-  }
 }
 
 // bio 内の URL を自動でリンク化し、改行を処理
@@ -144,7 +134,7 @@ export default async function UserStorePage({ params }: PageProps) {
   }
 
   const title = bookstore.bookstoreTitle || `@${bookstore.handle} の本屋`;
-  const bg = resolveBackground(bookstore.theme);
+  const bg = themeBackground(bookstore.theme);
 
   const owner = bookstore.owner;
 

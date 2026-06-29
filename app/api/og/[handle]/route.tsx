@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { themeOgColor } from '@/lib/themes';
 
 export const runtime = 'nodejs';
 
@@ -37,19 +38,8 @@ export async function GET(
       ? bookstore.bio.split('\n')[0].slice(0, 60) + (bookstore.bio.length > 60 ? '...' : '')
       : '';
 
-    // テーマカラーに基づく背景色
-    const getBackgroundColor = (theme?: string | null): string => {
-      switch (theme) {
-        case 'warm':
-          return '#fef3e2';
-        case 'paper':
-          return '#fdfaf3';
-        default:
-          return '#ffffff';
-      }
-    };
-
-    const backgroundColor = getBackgroundColor(bookstore.theme);
+    // テーマに基づく背景色（OGPは単色）
+    const backgroundColor = themeOgColor(bookstore.theme);
 
     return new ImageResponse(
       (

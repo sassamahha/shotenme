@@ -4,6 +4,7 @@
 import { useState, useTransition, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { THEMES } from '@/lib/themes';
 
 type Bookstore = {
   id: string;
@@ -247,9 +248,11 @@ export default function BookstoreSettingsForm({ bookstore }: Props) {
             background: '#fff',
           }}
         >
-          <option value="default">ライトグレー（デフォルト）</option>
-          <option value="warm">あたたかいグラデーション</option>
-          <option value="paper">紙っぽいオフホワイト</option>
+          {THEMES.map((t) => (
+            <option key={t.key} value={t.key}>
+              {t.label}
+            </option>
+          ))}
         </select>
       </div>
 
