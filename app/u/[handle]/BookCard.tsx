@@ -94,7 +94,7 @@ export default function BookCard({ userBook, amazonUrl, rakutenUrl, theme }: Pro
                 表紙画像なし
               </div>
             )}
-            {/* 帯（obi）= 本物の帯風。書影の下部に厚く被さる（紙クリーム） */}
+            {/* 帯（obi）= 書影の下部に薄く被さる半透明帯（すりガラス）。書影を活かす */}
             {obi && (
               <div
                 onClick={() => hasNote && setOpen(true)}
@@ -103,9 +103,11 @@ export default function BookCard({ userBook, amazonUrl, rakutenUrl, theme }: Pro
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  height: '33%',
-                  background: '#faf4e6',
-                  borderTop: '2px solid #d9c89a',
+                  height: '20%',
+                  background: 'rgba(255, 255, 255, 0.72)',
+                  backdropFilter: 'blur(3px)',
+                  WebkitBackdropFilter: 'blur(3px)',
+                  borderTop: '1px solid rgba(0, 0, 0, 0.06)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -117,13 +119,12 @@ export default function BookCard({ userBook, amazonUrl, rakutenUrl, theme }: Pro
                   style={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: '#4a3c1a',
+                    color: '#1f2937',
                     textAlign: 'center',
-                    lineHeight: 1.4,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
+                    whiteSpace: 'nowrap',
                     overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '100%',
                   }}
                 >
                   {obi}
