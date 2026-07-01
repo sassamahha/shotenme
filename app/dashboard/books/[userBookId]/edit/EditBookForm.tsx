@@ -23,7 +23,6 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
 
   const [title, setTitle] = useState(initial.title ?? '');
   const [author, setAuthor] = useState(initial.author ?? '');
-  const [imageUrl, setImageUrl] = useState(initial.imageUrl ?? '');
   const [obi, setObi] = useState(initial.obi ?? '');
   const [note, setNote] = useState(initial.note ?? '');
   const [isPublic, setIsPublic] = useState(initial.isPublic);
@@ -44,7 +43,6 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
         body: JSON.stringify({
           title: title.trim(),
           author: author.trim(),
-          imageUrl: imageUrl.trim(),
           obi: obi.trim(),
           note: note.trim(),
           isPublic,
@@ -145,13 +143,13 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
         />
       </div>
 
-      {/* ASIN（参照用・編集不可） */}
+      {/* ISBN（参照用・編集不可） */}
       <div>
         <label
           htmlFor="asin"
           style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 6 }}
         >
-          ASIN
+          ISBN
         </label>
         <input
           id="asin"
@@ -170,40 +168,13 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
         />
       </div>
 
-      {/* 商品画像 URL */}
-      <div>
-        <label
-          htmlFor="imageUrl"
-          style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 6 }}
-        >
-          商品画像 URL（Amazon の画像 URL をコピペ）
-        </label>
-        <input
-          id="imageUrl"
-          type="url"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="https://m.media-amazon.com/images/..."
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: '1px solid #d1d5db',
-            fontSize: 14,
-          }}
-        />
-        <p style={{ marginTop: 6, fontSize: 12, color: '#9ca3af' }}>
-          表紙画像を差し替えたいときだけ入力。空のままでもOKです。
-        </p>
-      </div>
-
       {/* 帯（obi）: 1行 */}
       <div>
         <label
           htmlFor="obi"
           style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 6 }}
         >
-          帯（1行）：一覧・シェアで見える面
+          帯（1行）：トップ画面で見える一言メッセージ
         </label>
         <input
           id="obi"
@@ -221,13 +192,13 @@ export default function EditBookForm({ userBookId, bookstoreId, initial }: EditB
         />
       </div>
 
-      {/* ノート（note）: 長文・任意 */}
+      {/* 推薦文（note）: 長文・任意 */}
       <div>
         <label
           htmlFor="note"
           style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 6 }}
         >
-          ノート（任意・長文）：棚を開いた人だけが読む熱量
+          推薦文（任意）：長文の熱い想いを伝えたいときに
         </label>
         <textarea
           id="note"

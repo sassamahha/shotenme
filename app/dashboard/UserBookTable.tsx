@@ -115,7 +115,7 @@ export default function UserBookTable({ userBooks: initial, bookstoreId }: Props
           <tr>
             <th style={{ padding: '10px 12px', width: 40 }}></th>
             <th style={{ padding: '10px 12px', minWidth: 200 }}>タイトル</th>
-            <th style={{ padding: '10px 12px', width: 220 }}>ASIN</th>
+            <th style={{ padding: '10px 12px', width: 220 }}>ISBN</th>
             <th style={{ padding: '10px 12px', minWidth: 200 }}>帯</th>
             <th style={{ padding: '10px 12px', width: 100 }}>公開</th>
             <th style={{ padding: '10px 12px', width: 100 }}>操作</th>

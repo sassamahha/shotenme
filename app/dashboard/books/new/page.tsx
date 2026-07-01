@@ -372,18 +372,18 @@ function NewBookInner() {
                 marginBottom: 16,
               }}
             >
-              ＋ もっと書く（ノート）
+              ＋ もっと書く（推薦文）
             </button>
           ) : (
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-                ノート（任意・長文）
+                推薦文（任意）
               </label>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={5}
-                placeholder="棚を開いた人だけが読む熱量。語りたい時だけ。"
+                placeholder="長文の熱い想いを伝えたいときに。"
                 style={{ ...inputStyle, resize: 'vertical' }}
               />
             </div>

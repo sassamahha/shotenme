@@ -174,7 +174,7 @@ export default function BookCard({ userBook, amazonUrl, rakutenUrl, theme }: Pro
                   cursor: 'pointer',
                 }}
               >
-                ノートを読む
+                推薦文を読む
               </button>
             )}
 
